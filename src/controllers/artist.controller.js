@@ -62,7 +62,7 @@ const getArtists = async (req, res) => {
         include: {
           user: { select: { avatarUrl: true } },
           categories: { include: { category: { select: { name: true, slug: true } } } },
-          _count: { select: { artworks: true } },
+          _count: { select: { artworks: { where: { isDraft: false } } } },
         },
       }),
       prisma.artistProfile.count({ where }),
@@ -81,7 +81,7 @@ const getArtist = async (req, res) => {
       include: {
         user: { select: { avatarUrl: true, createdAt: true, isBanned: true } },
         categories: { include: { category: true } },
-        _count: { select: { artworks: true, contactsReceived: true } },
+        _count: { select: { artworks: { where: { isDraft: false } }, contactsReceived: true } },
       },
     })
     if (!artist || artist.user?.isBanned) return res.status(404).json({ error: 'Artista não encontrado' })

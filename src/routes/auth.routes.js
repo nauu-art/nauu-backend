@@ -139,3 +139,37 @@ router.post('/newsletter', async (req, res) => {
     res.status(500).json({ error: 'Erro ao subscrever' })
   }
 })
+
+// Mudar password (utilizador autenticado)
+router.put('/change-password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Preenche todos os campos' })
+    if (newPassword.length < 8) return res.status(400).json({ error: 'A nova password deve ter pelo menos 8 caracteres' })
+    const { PrismaClient } = require('@prisma/client')
+    const bcrypt = require('bcryptjs')
+    const prisma = new PrismaClient()
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!valid) return res.status(400).json({ error: 'Password atual incorreta' })
+    const hash = await bcrypt.hash(newPassword, 12)
+    await prisma.user.update({ where: { id: req.user.id }, data: { passwordHash: hash } })
+    res.json({ ok: true })
+  } catch { res.status(500).json({ error: 'Erro ao mudar password' }) }
+})
+
+// Apagar conta
+router.delete('/account', authenticate, async (req, res) => {
+  try {
+    const { password } = req.body
+    if (!password) return res.status(400).json({ error: 'Confirma com a tua password' })
+    const { PrismaClient } = require('@prisma/client')
+    const bcrypt = require('bcryptjs')
+    const prisma = new PrismaClient()
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+    const valid = await bcrypt.compare(password, user.passwordHash)
+    if (!valid) return res.status(400).json({ error: 'Password incorreta' })
+    await prisma.user.delete({ where: { id: req.user.id } })
+    res.json({ ok: true })
+  } catch { res.status(500).json({ error: 'Erro ao apagar conta' }) }
+})
