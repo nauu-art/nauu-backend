@@ -63,7 +63,7 @@ const getUsers = async (req, res) => {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true, name: true, email: true, accountType: true,
-          isEmailVerified: true, isBanned: true, createdAt: true,
+          isEmailVerified: true, isBanned: true, createdAt: true, artistProfile: { select: { username: true, status: true } },
           artistProfile: { select: { artistName: true, username: true, isFeatured: true } },
           _count: { select: { favorites: true, contactsSent: true } }
         }

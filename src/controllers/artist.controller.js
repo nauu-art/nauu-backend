@@ -6,7 +6,7 @@ const getArtists = async (req, res) => {
   try {
     const { page = 1, limit = 20, search, category, city, country, sort = 'createdAt_desc' } = req.query
     const skip = (Number(page) - 1) * Number(limit)
-    const where = {}
+    const where = { status: 'APPROVED', user: { isBanned: false } }
     if (search) {
       where.OR = [
         { artistName: { contains: search, mode: 'insensitive' } },
@@ -79,12 +79,22 @@ const getArtist = async (req, res) => {
     const artist = await prisma.artistProfile.findUnique({
       where: { username },
       include: {
-        user: { select: { avatarUrl: true, createdAt: true } },
+        user: { select: { avatarUrl: true, createdAt: true, isBanned: true } },
         categories: { include: { category: true } },
         _count: { select: { artworks: true, contactsReceived: true } },
       },
     })
-    if (!artist) return res.status(404).json({ error: 'Artista não encontrado' })
+    if (!artist || artist.user?.isBanned) return res.status(404).json({ error: 'Artista não encontrado' })
+    if (artist.status !== 'APPROVED') {
+      // Só o próprio artista pode ver o seu perfil não aprovado
+      const authHeader = req.headers.authorization
+      if (!authHeader) return res.status(404).json({ error: 'Artista não encontrado' })
+      const jwt = require('jsonwebtoken')
+      try {
+        const decoded = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET)
+        if (decoded.id !== artist.userId) return res.status(404).json({ error: 'Artista não encontrado' })
+      } catch { return res.status(404).json({ error: 'Artista não encontrado' }) }
+    }
     res.json(artist)
   } catch (err) {
     res.status(500).json({ error: 'Erro ao obter artista' })
@@ -97,7 +107,16 @@ const getArtistArtworks = async (req, res) => {
     const { page = 1, limit = 12, availability } = req.query
     const skip = (Number(page) - 1) * Number(limit)
     const artist = await prisma.artistProfile.findUnique({ where: { username } })
-    if (!artist) return res.status(404).json({ error: 'Artista não encontrado' })
+    if (!artist || artist.user?.isBanned) return res.status(404).json({ error: 'Artista não encontrado' })
+    if (artist.status !== 'APPROVED') {
+      const authHeader = req.headers.authorization
+      if (!authHeader) return res.status(404).json({ error: 'Artista não encontrado' })
+      const jwt = require('jsonwebtoken')
+      try {
+        const decoded = jwt.verify(authHeader.replace('Bearer ', ''), process.env.JWT_SECRET)
+        if (decoded.id !== artist.userId) return res.status(404).json({ error: 'Artista não encontrado' })
+      } catch { return res.status(404).json({ error: 'Artista não encontrado' }) }
+    }
     const where = { artistId: artist.id }
     if (availability) where.availability = availability
     const [artworks, total] = await Promise.all([

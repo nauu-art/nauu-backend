@@ -48,7 +48,9 @@ model ArtistProfile {
   behanceUrl     String?
   linkedinUrl    String?
   isFeatured     Boolean  @default(false)
-  isApproved     Boolean  @default(true)
+  isApproved     Boolean  @default(false)
+  status         ArtistStatus @default(DRAFT)
+  adminNotes     String?
   createdAt      DateTime @default(now())
 
   artworks         Artwork[]
@@ -210,4 +212,12 @@ enum Availability {
   AVAILABLE
   SOLD
   RESERVED
+}
+
+enum ArtistStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
 }

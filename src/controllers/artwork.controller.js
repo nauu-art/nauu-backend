@@ -19,8 +19,8 @@ const artworkSchema = z.object({
 const getArtworks = async (req, res) => {
   try {
     const { page = 1, limit = 20, category, minPrice, maxPrice, availability, search, sort = 'createdAt_desc', featured } = req.query
+    const where = { artist: { status: 'APPROVED', user: { isBanned: false } } }
     const skip = (Number(page) - 1) * Number(limit)
-    const where = {}
 
     if (search) {
       where.OR = [

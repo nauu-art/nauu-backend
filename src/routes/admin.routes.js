@@ -31,6 +31,21 @@ router.post('/login', adminLogin)
 router.get('/stats', authenticate, requireAdmin, getStats)
 router.get('/users', authenticate, requireAdmin, getUsers)
 router.put('/users/:id/ban', authenticate, requireAdmin, banUser)
+
+router.delete('/users/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client')
+    const prisma = new PrismaClient()
+    const user = await prisma.user.findUnique({ where: { id: req.params.id } })
+    if (!user) return res.status(404).json({ error: 'Utilizador não encontrado' })
+    if (user.accountType === 'ADMIN') return res.status(403).json({ error: 'Não podes apagar um admin' })
+    await prisma.user.delete({ where: { id: req.params.id } })
+    res.json({ message: 'Utilizador eliminado' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erro ao eliminar utilizador' })
+  }
+})
 router.put('/users/:id/promote', authenticate, requireAdmin, promoteToArtist)
 router.get('/artworks', authenticate, requireAdmin, getArtworks)
 router.put('/artworks/:id/featured', authenticate, requireAdmin, toggleFeatured)
