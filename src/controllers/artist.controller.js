@@ -123,7 +123,7 @@ const getArtistArtworks = async (req, res) => {
       prisma.artwork.findMany({
         where, skip, take: Number(limit),
         orderBy: { createdAt: 'desc' },
-        include: { images: { where: { isPrimary: true }, take: 1 }, categories: { include: { category: true } } },
+        include: { images: { orderBy: { isPrimary: 'desc' } }, categories: { include: { category: true } } },
       }),
       prisma.artwork.count({ where }),
     ])

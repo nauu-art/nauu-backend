@@ -78,12 +78,12 @@ const getFeed = async (req, res) => {
 
     const [artworks, total] = await Promise.all([
       prisma.artwork.findMany({
-        where: { artistId: { in: artistIds } },
+        where: { artistId: { in: artistIds }, isDraft: false },
         skip,
         take: Number(limit),
         orderBy: { createdAt: 'desc' },
         include: {
-          images: { where: { isPrimary: true }, take: 1 },
+          images: { orderBy: { isPrimary: 'desc' } },
           artist: {
             select: {
               id: true, artistName: true, username: true,
@@ -93,7 +93,7 @@ const getFeed = async (req, res) => {
           categories: { include: { category: { select: { name: true } } } }
         }
       }),
-      prisma.artwork.count({ where: { artistId: { in: artistIds } } })
+      prisma.artwork.count({ where: { artistId: { in: artistIds }, isDraft: false } })
     ])
 
     res.json({ data: artworks, posts, pagination: { total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) } })

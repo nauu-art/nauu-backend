@@ -12,6 +12,7 @@ const artworkSchema = z.object({
   yearCreated: z.number().int().min(1800).max(new Date().getFullYear()).optional(),
   price: z.number().positive().optional(),
   priceOnRequest: z.boolean().default(false),
+  isDraft: z.boolean().default(false),
   availability: z.enum(['AVAILABLE', 'SOLD', 'RESERVED']).default('AVAILABLE'),
   categoryIds: z.array(z.string()).optional(),
 })
@@ -19,7 +20,7 @@ const artworkSchema = z.object({
 const getArtworks = async (req, res) => {
   try {
     const { page = 1, limit = 20, category, minPrice, maxPrice, availability, search, sort = 'createdAt_desc', featured } = req.query
-    const where = { artist: { status: 'APPROVED', user: { isBanned: false } } }
+    const where = { artist: { status: 'APPROVED', user: { isBanned: false } }, isDraft: false }
     const skip = (Number(page) - 1) * Number(limit)
 
     if (search) {
@@ -57,7 +58,7 @@ const getArtworks = async (req, res) => {
       prisma.artwork.findMany({
         where, skip, take: Number(limit), orderBy,
         include: {
-          images: { where: { isPrimary: true }, take: 1 },
+          images: { orderBy: { isPrimary: 'desc' } },
           artist: { select: { id: true, artistName: true, username: true, city: true } },
           categories: { include: { category: { select: { name: true, slug: true } } } },
         },
@@ -107,6 +108,7 @@ const createArtwork = async (req, res) => {
       yearCreated: req.body.yearCreated ? Number(req.body.yearCreated) : undefined,
       price: req.body.price ? Number(req.body.price) : undefined,
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
+      isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
     })
 
     const { categoryIds, ...artworkData } = data
@@ -140,6 +142,8 @@ const updateArtwork = async (req, res) => {
       ...req.body,
       yearCreated: req.body.yearCreated ? Number(req.body.yearCreated) : undefined,
       price: req.body.price ? Number(req.body.price) : undefined,
+      priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
+      isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
     })
 
     const { categoryIds, ...artworkData } = data

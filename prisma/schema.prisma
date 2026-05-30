@@ -93,6 +93,7 @@ model Artwork {
   priceOnRequest Boolean      @default(false)
   availability   Availability @default(AVAILABLE)
   isFeatured     Boolean      @default(false)
+  isDraft        Boolean      @default(false)
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
