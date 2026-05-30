@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  accountType        AccountType @default(USER)
+  avatarUrl          String?
+  isEmailVerified    Boolean   @default(false)
+  isBanned           Boolean   @default(false)
+  emailVerifyToken   String?
+  resetPasswordToken String?
+  resetTokenExpires  DateTime?
+  notifyOnMessage    Boolean   @default(true)
+  notifyOnFavorite   Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  artistProfile  ArtistProfile?
+  favorites      Favorite[]
+  collections    Collection[]
+  following      Follow[]      @relation("Follower")
+  contactsSent   ContactRequest[] @relation("SenderContacts")
+}
+
+model ArtistProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistName     String
+  username       String   @unique
+  bio            String?
+  coverImageUrl  String?
+  city           String?
+  country        String?
+  contactEmail   String?
+  phone          String?
+  websiteUrl     String?
+  instagramUrl   String?
+  behanceUrl     String?
+  linkedinUrl    String?
+  isFeatured     Boolean  @default(false)
+  isApproved     Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  artworks         Artwork[]
+  categories       ArtistCategory[]
+  contactsReceived ContactRequest[] @relation("ArtistContacts")
+  followers        Follow[]
+  posts            ArtistPost[]
+}
+
+model Category {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  iconUrl     String?
+
+  artworks ArtworkCategory[]
+  artists  ArtistCategory[]
+}
+
+model ArtistCategory {
+  artistId   String
+  categoryId String
+  artist     ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  category   Category      @relation(fields: [categoryId], references: [id])
+
+  @@id([artistId, categoryId])
+}
+
+model Artwork {
+  id             String       @id @default(uuid())
+  artistId       String
+  artist         ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  technique      String?
+  dimensions     String?
+  yearCreated    Int?
+  price          Decimal?     @db.Decimal(10, 2)
+  priceOnRequest Boolean      @default(false)
+  availability   Availability @default(AVAILABLE)
+  isFeatured     Boolean      @default(false)
+  isApproved     Boolean      @default(true)
+  viewCount      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  images     ArtworkImage[]
+  categories ArtworkCategory[]
+  favorites     Favorite[]
+  collectionItems CollectionItem[]
+  contacts   ContactRequest[]
+}
+
+model ArtworkImage {
+  id           String  @id @default(uuid())
+  artworkId    String
+  artwork      Artwork @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  imageUrl     String
+  isPrimary    Boolean @default(false)
+  displayOrder Int     @default(0)
+}
+
+model ArtworkCategory {
+  artworkId  String
+  categoryId String
+  artwork    Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([artworkId, categoryId])
+}
+
+model SiteContent {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  title     String?
+  content   String
+  imageUrl  String?
+  updatedAt DateTime @updatedAt
+}
+
+model ArtistPost {
+  id          String        @id @default(uuid())
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  imageUrl    String?
+  published   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, artistId])
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  items       CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(uuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  artworkId    String
+  artwork      Artwork    @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([collectionId, artworkId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  artworkId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, artworkId])
+}
+
+model ContactRequest {
+  id           String   @id @default(uuid())
+  senderUserId String?
+  sender       User?    @relation("SenderContacts", fields: [senderUserId], references: [id])
+  artistId     String
+  artist       ArtistProfile @relation("ArtistContacts", fields: [artistId], references: [id], onDelete: Cascade)
+  artworkId    String?
+  artwork      Artwork? @relation(fields: [artworkId], references: [id])
+  name         String
+  email        String
+  message      String
+  createdAt    DateTime @default(now())
+}
+
+enum AccountType {
+  USER
+  ARTIST
+  ADMIN
+}
+
+enum Availability {
+  AVAILABLE
+  SOLD
+  RESERVED
+}
