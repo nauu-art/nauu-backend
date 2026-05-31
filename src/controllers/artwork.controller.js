@@ -85,8 +85,8 @@ const getArtwork = async (req, res) => {
         images: { orderBy: { displayOrder: 'asc' } },
         artist: {
           select: {
-            id: true, artistName: true, username: true,
-            user: { select: { avatarUrl: true } },
+            id: true, artistName: true, username: true, userId: true,
+            user: { select: { avatarUrl: true, id: true } },
             city: true, country: true, bio: true, contactEmail: true,
           },
         },

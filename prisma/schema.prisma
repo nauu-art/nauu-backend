@@ -29,7 +29,11 @@ model User {
   collections    Collection[]
   following      Follow[]      @relation("Follower")
   contactsSent   ContactRequest[] @relation("SenderContacts")
-  notifications  Notification[]
+  notifications         Notification[]
+  conversations         ConversationParticipant[]
+  sentMessages          Message[]         @relation("SentMessages")
+  readMessages          MessageRead[]     @relation("ReadMessages")
+  reportedConversations Conversation[]    @relation("ReportedConversations")
 }
 
 model ArtistProfile {
@@ -98,6 +102,7 @@ model Artwork {
   isDraft          Boolean      @default(false)
   collectionId     String?
   collection       ArtistCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  conversations    Conversation[]
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -217,6 +222,75 @@ enum Availability {
   AVAILABLE
   SOLD
   RESERVED
+}
+
+model Conversation {
+  id                  String    @id @default(uuid())
+  artworkId           String?
+  artwork             Artwork?  @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  status              String    @default("OPEN")
+  canBuyerReply       Boolean   @default(true)
+  canArtistReply      Boolean   @default(true)
+  lastMessageAt       DateTime?
+  lastMessagePreview  String?
+  reportedAt          DateTime?
+  reportedBy          String?
+  reportedByUser      User?     @relation("ReportedConversations", fields: [reportedBy], references: [id], onDelete: SetNull)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  participants        ConversationParticipant[]
+  messages            Message[]
+  shipments           Shipment[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @default("BUYER")
+  unreadCount    Int          @default(0)
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  type           String       @default("TEXT")
+  imageUrl       String?
+  metadata       String?
+  createdAt      DateTime     @default(now())
+  reads          MessageRead[]
+}
+
+model MessageRead {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("ReadMessages", fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime @default(now())
+
+  @@unique([messageId, userId])
+}
+
+model Shipment {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  carrier        String?
+  trackingNumber String?
+  trackingUrl    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime     @default(now())
 }
 
 model Notification {
