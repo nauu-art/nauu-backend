@@ -143,13 +143,16 @@ router.post('/newsletter', async (req, res) => {
 // Mudar password (utilizador autenticado)
 router.get('/check-username', async (req, res) => {
   try {
-    const { username } = req.query
-    if (!username || username.length < 3) return res.status(400).json({ error: 'Username inválido' })
+    const { username, userId } = req.query
+    if (!username || username.length < 3) return res.status(400).json({ error: 'Mínimo 3 caracteres' })
+    if (!/^[a-z0-9_-]+$/.test(username)) return res.status(400).json({ error: 'Apenas letras minúsculas, números, _ e -' })
     const { PrismaClient } = require('@prisma/client')
     const prisma = new PrismaClient()
     const userExists = await prisma.user.findUnique({ where: { username } })
     const artistExists = await prisma.artistProfile.findUnique({ where: { username } })
-    if (userExists || artistExists) return res.status(409).json({ error: 'Username já em uso' })
+    // Ignorar o próprio utilizador
+    if (userExists && userExists.id !== userId) return res.status(409).json({ error: 'Username já em uso' })
+    if (artistExists && artistExists.userId !== userId) return res.status(409).json({ error: 'Username já em uso' })
     res.json({ available: true })
   } catch { res.status(500).json({ error: 'Erro' }) }
 })
