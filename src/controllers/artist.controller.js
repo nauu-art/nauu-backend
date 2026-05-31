@@ -117,13 +117,13 @@ const getArtistArtworks = async (req, res) => {
         if (decoded.id !== artist.userId) return res.status(404).json({ error: 'Artista não encontrado' })
       } catch { return res.status(404).json({ error: 'Artista não encontrado' }) }
     }
-    const where = { artistId: artist.id }
+    const where = { artistId: artist.id, isDraft: false }
     if (availability) where.availability = availability
     const [artworks, total] = await Promise.all([
       prisma.artwork.findMany({
         where, skip, take: Number(limit),
         orderBy: { createdAt: 'desc' },
-        include: { images: { orderBy: { isPrimary: 'desc' } }, categories: { include: { category: true } } },
+        include: { images: { orderBy: { isPrimary: 'desc' } }, categories: { include: { category: true } }, collection: { select: { id: true, name: true } } },
       }),
       prisma.artwork.count({ where }),
     ])

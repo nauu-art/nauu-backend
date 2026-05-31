@@ -13,6 +13,7 @@ const artworkSchema = z.object({
   price: z.number().positive().optional(),
   priceOnRequest: z.boolean().default(false),
   isDraft: z.boolean().default(false),
+  collectionId: z.string().nullable().optional(),
   availability: z.enum(['AVAILABLE', 'SOLD', 'RESERVED']).default('AVAILABLE'),
   categoryIds: z.array(z.string()).optional(),
 })
@@ -61,6 +62,7 @@ const getArtworks = async (req, res) => {
           images: { orderBy: { isPrimary: 'desc' } },
           artist: { select: { id: true, artistName: true, username: true, city: true } },
           categories: { include: { category: { select: { name: true, slug: true } } } },
+          collection: { select: { id: true, name: true } },
         },
       }),
       prisma.artwork.count({ where }),
@@ -88,6 +90,7 @@ const getArtwork = async (req, res) => {
           },
         },
         categories: { include: { category: true } },
+        collection: { select: { id: true, name: true } },
       },
     })
     if (!artwork) return res.status(404).json({ error: 'Obra não encontrada' })
@@ -109,6 +112,7 @@ const createArtwork = async (req, res) => {
       price: req.body.price ? Number(req.body.price) : undefined,
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
+      collectionId: req.body.collectionId || null,
     })
 
     const { categoryIds, ...artworkData } = data
@@ -144,6 +148,7 @@ const updateArtwork = async (req, res) => {
       price: req.body.price ? Number(req.body.price) : undefined,
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
+      collectionId: req.body.collectionId || null,
     })
 
     const { categoryIds, ...artworkData } = data

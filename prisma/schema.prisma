@@ -58,6 +58,7 @@ model ArtistProfile {
   contactsReceived ContactRequest[] @relation("ArtistContacts")
   followers        Follow[]
   posts            ArtistPost[]
+  collections      ArtistCollection[]
 }
 
 model Category {
@@ -92,8 +93,10 @@ model Artwork {
   price          Decimal?     @db.Decimal(10, 2)
   priceOnRequest Boolean      @default(false)
   availability   Availability @default(AVAILABLE)
-  isFeatured     Boolean      @default(false)
-  isDraft        Boolean      @default(false)
+  isFeatured       Boolean      @default(false)
+  isDraft          Boolean      @default(false)
+  collectionId     String?
+  collection       ArtistCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -221,4 +224,17 @@ enum ArtistStatus {
   APPROVED
   CHANGES_REQUESTED
   REJECTED
+}
+
+model ArtistCollection {
+  id          String   @id @default(uuid())
+  artistId    String
+  artist      ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  coverImageUrl String?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  artworks    Artwork[]
 }
