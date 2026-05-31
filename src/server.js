@@ -17,7 +17,9 @@ const postRoutes = require('./routes/post.routes')
 const approvalRoutes = require('./routes/approval.routes')
 const artistCollectionRoutes = require('./routes/collection_artist.routes')
 const notificationRoutes = require('./routes/notification.routes')
-const messagesRoutes = require('./routes/messages.routes');
+const messagesRoutes = require('./routes/messages.routes')
+const paymentRoutes = require('./routes/payment.routes')
+const profileRoutes = require('./routes/profile.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,9 +28,18 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // Segurança
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Next.js gere isto
+  crossOriginEmbedderPolicy: false,
+}));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  next()
+})
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: [process.env.FRONTEND_URL, 'https://staging.nauu.art'].filter(Boolean),
   credentials: true,
 }));
 
@@ -43,7 +54,7 @@ app.use(rateLimit({
 // Rate limiting estrito para autenticação
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 10,
   message: { error: 'Demasiadas tentativas. Tenta em 15 minutos.' },
 });
 
@@ -64,7 +75,9 @@ app.use('/api/posts', postRoutes)
 app.use('/api/approval', approvalRoutes)
 app.use('/api/artist-collections', artistCollectionRoutes)
 app.use('/api/notifications', notificationRoutes)
-app.use('/api/messages', messagesRoutes);
+app.use('/api/messages', messagesRoutes)
+app.use('/api/payments', paymentRoutes)
+app.use('/api/profile', profileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

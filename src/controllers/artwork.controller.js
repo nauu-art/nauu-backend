@@ -86,6 +86,7 @@ const getArtwork = async (req, res) => {
         artist: {
           select: {
             id: true, artistName: true, username: true, userId: true,
+            stripeOnboarded: true, commissionPercent: true,
             user: { select: { avatarUrl: true, id: true } },
             city: true, country: true, bio: true, contactEmail: true,
           },

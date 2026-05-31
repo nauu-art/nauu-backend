@@ -140,9 +140,12 @@ const me = async (req, res) => {
       where: { id: req.user.id },
       select: {
         id: true, name: true, email: true, accountType: true, avatarUrl: true,
+        username: true, bio: true, city: true, country: true,
+        onboardingCompleted: true, accountSubtype: true,
         artistProfile: {
-          select: { id: true, username: true, artistName: true, coverImageUrl: true, city: true, country: true },
+          select: { id: true, username: true, artistName: true, coverImageUrl: true, city: true, country: true, status: true, stripeOnboarded: true },
         },
+        _count: { select: { userFollowers: true, userFollowing: true } }
       },
     });
     res.json(user);

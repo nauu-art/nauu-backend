@@ -19,6 +19,12 @@ model User {
   emailVerifyToken   String?
   resetPasswordToken String?
   resetTokenExpires  DateTime?
+  username           String?   @unique
+  bio                String?
+  city               String?
+  country            String?
+  onboardingCompleted Boolean  @default(false)
+  accountSubtype     String?   @default("COLLECTOR")
   notifyOnMessage    Boolean   @default(true)
   notifyOnFavorite   Boolean   @default(true)
   createdAt          DateTime  @default(now())
@@ -34,6 +40,20 @@ model User {
   sentMessages          Message[]         @relation("SentMessages")
   readMessages          MessageRead[]     @relation("ReadMessages")
   reportedConversations Conversation[]    @relation("ReportedConversations")
+  orders                Order[]           @relation("BuyerOrders")
+  userFollowing         UserFollow[]      @relation("UserFollower")
+  userFollowers         UserFollow[]      @relation("UserFollowing")
+}
+
+model UserFollow {
+  id          String   @id @default(uuid())
+  followerId  String
+  follower    User     @relation("UserFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
 }
 
 model ArtistProfile {
@@ -55,7 +75,10 @@ model ArtistProfile {
   isFeatured     Boolean  @default(false)
   isApproved     Boolean  @default(false)
   status         ArtistStatus @default(DRAFT)
-  adminNotes     String?
+  adminNotes       String?
+  stripeAccountId  String?
+  stripeOnboarded  Boolean @default(false)
+  commissionPercent Decimal @default(5.00)
   createdAt      DateTime @default(now())
 
   artworks         Artwork[]
@@ -64,7 +87,9 @@ model ArtistProfile {
   followers        Follow[]
   posts            ArtistPost[]
   collections      ArtistCollection[]
+  orders           Order[]
 }
+
 
 model Category {
   id          String  @id @default(uuid())
@@ -103,6 +128,7 @@ model Artwork {
   collectionId     String?
   collection       ArtistCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   conversations    Conversation[]
+  orders           Order[]
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -241,6 +267,7 @@ model Conversation {
   participants        ConversationParticipant[]
   messages            Message[]
   shipments           Shipment[]
+  orders              Order[]
 }
 
 model ConversationParticipant {
@@ -291,6 +318,30 @@ model Shipment {
   shippedAt      DateTime?
   deliveredAt    DateTime?
   createdAt      DateTime     @default(now())
+}
+
+model Order {
+  id                    String   @id @default(uuid())
+  buyerId               String
+  buyer                 User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  artistId              String
+  artist                ArtistProfile @relation(fields: [artistId], references: [id])
+  artworkId             String
+  artwork               Artwork  @relation(fields: [artworkId], references: [id])
+  conversationId        String?
+  conversation          Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  status                String   @default("PENDING")
+  amount                Decimal
+  platformFee           Decimal
+  artistAmount          Decimal
+  currency              String   @default("eur")
+  stripePaymentIntentId String?
+  stripeTransferId      String?
+  shippingAddress       String?
+  notes                 String?
+  paidAt                DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Notification {
