@@ -15,7 +15,8 @@ const collectionRoutes = require('./routes/collection.routes');
 const followRoutes = require('./routes/follow.routes');
 const postRoutes = require('./routes/post.routes')
 const approvalRoutes = require('./routes/approval.routes')
-const artistCollectionRoutes = require('./routes/collection_artist.routes');
+const artistCollectionRoutes = require('./routes/collection_artist.routes')
+const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,7 +61,8 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/follow', followRoutes);
 app.use('/api/posts', postRoutes)
 app.use('/api/approval', approvalRoutes)
-app.use('/api/artist-collections', artistCollectionRoutes);
+app.use('/api/artist-collections', artistCollectionRoutes)
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

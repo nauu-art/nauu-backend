@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
+const { notify, TYPES } = require('../utils/notify')
 const prisma = new PrismaClient()
 
 const followArtist = async (req, res) => {
@@ -9,8 +10,19 @@ const followArtist = async (req, res) => {
       create: { followerId: req.user.id, artistId },
       update: {}
     })
+    // Notificar artista
+    try {
+      const [followerUser, artistProfile] = await Promise.all([
+        prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }),
+        prisma.artistProfile.findUnique({ where: { id: artistId }, select: { userId: true, username: true } })
+      ])
+      if (followerUser && artistProfile) {
+        await notify(artistProfile.userId, TYPES.NEW_FOLLOWER, `${followerUser.name} começou a seguir-te`, `/${artistProfile.username}`)
+      }
+    } catch {}
     res.json({ following: true })
   } catch (err) {
+    console.error('Follow error:', err)
     res.status(500).json({ error: 'Erro ao seguir artista' })
   }
 }

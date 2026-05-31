@@ -5,6 +5,7 @@ const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 const nodemailer = require('nodemailer')
 
+const { notify, TYPES } = require('../utils/notify')
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -110,6 +111,7 @@ router.post('/approve/:id', authenticate, requireAdmin, async (req, res) => {
       data: { status: 'APPROVED', isApproved: true, adminNotes: null },
       include: { user: true }
     })
+    await notify(artist.userId, TYPES.PROFILE_APPROVED, 'O teu perfil foi aprovado! Já és visível publicamente.', `/${artist.username}`)
     await sendMail(
       artist.user.email,
       'O seu perfil foi aprovado — nauu.art',
@@ -130,6 +132,7 @@ router.post('/changes/:id', authenticate, requireAdmin, async (req, res) => {
       data: { status: 'CHANGES_REQUESTED', adminNotes: notes },
       include: { user: true }
     })
+    await notify(artist.userId, TYPES.PROFILE_CHANGES, `A equipa pediu alterações ao teu perfil: ${notes}`, '/dashboard/profile')
     await sendMail(
       artist.user.email,
       'São necessárias alterações ao seu perfil — nauu.art',

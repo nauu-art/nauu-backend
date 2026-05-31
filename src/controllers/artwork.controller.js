@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client')
+const { notify, TYPES } = require('../utils/notify')
 const { z } = require('zod')
 const { processImage } = require('../config/storage')
 
@@ -126,6 +127,18 @@ const createArtwork = async (req, res) => {
       include: { images: true, categories: { include: { category: true } } },
     })
 
+    // Notificar seguidores quando não é rascunho
+    if (!artworkData.isDraft) {
+      try {
+        const followers = await prisma.follow.findMany({
+          where: { artistId: artistProfile.id },
+          select: { follower: { select: { id: true } } }
+        })
+        for (const f of followers) {
+          await notify(f.follower.id, TYPES.NEW_ARTWORK, `${artistProfile.artistName} publicou uma nova obra: ${artwork.title}`, `/artwork/${artwork.id}`)
+        }
+      } catch {}
+    }
     res.status(201).json(artwork)
   } catch (err) {
     if (err.name === 'ZodError') return res.status(400).json({ error: err.errors[0].message })
