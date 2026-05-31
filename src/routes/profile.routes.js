@@ -78,18 +78,36 @@ router.post('/avatar', authenticate, upload.single('avatar'), async (req, res) =
 // POST /api/profile/complete-onboarding — completar onboarding
 router.post('/complete-onboarding', authenticate, async (req, res) => {
   try {
-    const { username, bio, city, country, interests } = req.body
+    const { username, bio, city, country, district, interests, accountType, artistName } = req.body
     if (!username) return res.status(400).json({ error: 'Username obrigatório' })
 
     const existing = await prisma.user.findUnique({ where: { username } })
     if (existing && existing.id !== req.user.id) return res.status(409).json({ error: 'Username já em uso' })
 
-    await prisma.user.update({
-      where: { id: req.user.id },
-      data: { username, bio, city, country, onboardingCompleted: true }
-    })
+    const artistUsernameExists = await prisma.artistProfile.findUnique({ where: { username } })
+    if (artistUsernameExists && artistUsernameExists.userId !== req.user.id) return res.status(409).json({ error: 'Username já em uso' })
 
-    res.json({ ok: true })
+    // Se escolheu artista, criar ArtistProfile
+    if (accountType === 'artist') {
+      if (!artistName) return res.status(400).json({ error: 'Nome artístico obrigatório' })
+      const existingProfile = await prisma.artistProfile.findUnique({ where: { userId: req.user.id } })
+      if (!existingProfile) {
+        await prisma.artistProfile.create({
+          data: { userId: req.user.id, username, artistName, city, country, district, bio }
+        })
+      }
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { username, bio, city, country, district, onboardingCompleted: true, accountType: 'ARTIST', accountSubtype: 'ARTIST' }
+      })
+    } else {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { username, bio, city, country, district, onboardingCompleted: true, accountSubtype: 'COLLECTOR' }
+      })
+    }
+
+    res.json({ ok: true, isArtist: accountType === 'artist' })
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
 })
 

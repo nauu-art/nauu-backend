@@ -23,6 +23,7 @@ model User {
   bio                String?
   city               String?
   country            String?
+  district           String?
   onboardingCompleted Boolean  @default(false)
   accountSubtype     String?   @default("COLLECTOR")
   notifyOnMessage    Boolean   @default(true)
@@ -78,6 +79,7 @@ model ArtistProfile {
   adminNotes       String?
   stripeAccountId  String?
   stripeOnboarded  Boolean @default(false)
+  district          String?
   commissionPercent Decimal @default(5.00)
   createdAt      DateTime @default(now())
 

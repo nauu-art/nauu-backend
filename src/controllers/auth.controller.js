@@ -125,6 +125,8 @@ const login = async (req, res) => {
         email: user.email,
         accountType: user.accountType,
         avatarUrl: user.avatarUrl,
+        onboardingCompleted: user.onboardingCompleted,
+        username: user.username,
         artistProfile: user.artistProfile,
       },
     });
