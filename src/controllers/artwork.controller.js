@@ -61,7 +61,7 @@ const getArtworks = async (req, res) => {
         where, skip, take: Number(limit), orderBy,
         include: {
           images: { orderBy: { isPrimary: 'desc' } },
-          artist: { select: { id: true, artistName: true, username: true, city: true } },
+          artist: { select: { id: true, artistName: true, username: true, city: true, userId: true, user: { select: { avatarUrl: true } } } },
           categories: { include: { category: { select: { name: true, slug: true } } } },
           collection: { select: { id: true, name: true } },
         },
