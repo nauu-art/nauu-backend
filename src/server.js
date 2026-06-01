@@ -82,6 +82,10 @@ app.use('/api/payments', paymentRoutes)
 app.use('/api/posts-generic', postsGenericRoutes)
 app.use('/api/interactions', interactionsRoutes)
 app.use('/api/profile', profileRoutes);
+const curatedRoutes = require('./routes/curated.routes')
+app.use('/api/curated', curatedRoutes)
+const analyticsRoutes = require('./routes/analytics.routes')
+app.use('/api/analytics', analyticsRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => {
