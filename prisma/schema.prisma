@@ -131,6 +131,7 @@ model Artwork {
   collection       ArtistCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   conversations    Conversation[]
   orders           Order[]
+  shipping         ArtworkShipping?
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -344,6 +345,18 @@ model Order {
   paidAt                DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+model ArtworkShipping {
+  id            String   @id @default(uuid())
+  artworkId     String   @unique
+  artwork       Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  freeShipping  Boolean  @default(false)
+  portugal      Decimal?
+  europe        Decimal?
+  world         Decimal?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Notification {

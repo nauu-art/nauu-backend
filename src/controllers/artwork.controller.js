@@ -93,6 +93,7 @@ const getArtwork = async (req, res) => {
         },
         categories: { include: { category: true } },
         collection: { select: { id: true, name: true } },
+        shipping: true,
       },
     })
     if (!artwork) return res.status(404).json({ error: 'Obra não encontrada' })

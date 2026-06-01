@@ -198,3 +198,30 @@ router.get('/sales', authenticate, requireArtist, async (req, res) => {
 })
 
 module.exports = router
+
+// PUT /api/payments/shipping/:artworkId — definir portes de envio
+router.put('/shipping/:artworkId', authenticate, requireArtist, async (req, res) => {
+  try {
+    const artist = await prisma.artistProfile.findUnique({ where: { userId: req.user.id } })
+    const artwork = await prisma.artwork.findUnique({ where: { id: req.params.artworkId } })
+    if (!artwork || artwork.artistId !== artist.id) return res.status(403).json({ error: 'Sem permissão' })
+
+    const { freeShipping, portugal, europe, world } = req.body
+
+    const shipping = await prisma.artworkShipping.upsert({
+      where: { artworkId: req.params.artworkId },
+      create: { artworkId: req.params.artworkId, freeShipping: !!freeShipping, portugal: portugal || null, europe: europe || null, world: world || null },
+      update: { freeShipping: !!freeShipping, portugal: portugal || null, europe: europe || null, world: world || null, updatedAt: new Date() }
+    })
+
+    res.json(shipping)
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
+})
+
+// GET /api/payments/shipping/:artworkId — obter portes
+router.get('/shipping/:artworkId', async (req, res) => {
+  try {
+    const shipping = await prisma.artworkShipping.findUnique({ where: { artworkId: req.params.artworkId } })
+    res.json(shipping || { freeShipping: false, portugal: null, europe: null, world: null })
+  } catch { res.status(500).json({ error: 'Erro' }) }
+})
