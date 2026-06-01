@@ -48,7 +48,7 @@ const getStats = async (req, res) => {
 // GET /api/admin/users
 const getUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, type } = req.query
+    const { page = 1, limit = 20, search, type, status } = req.query
     const skip = (Number(page) - 1) * Number(limit)
     const where = {}
     if (search) where.OR = [
@@ -56,6 +56,8 @@ const getUsers = async (req, res) => {
       { email: { contains: search, mode: 'insensitive' } },
     ]
     if (type) where.accountType = type
+    if (status === 'pending') where.artistProfile = { status: 'PENDING' }
+    if (status === 'approved') where.artistProfile = { status: 'APPROVED' }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -63,16 +65,63 @@ const getUsers = async (req, res) => {
         orderBy: { createdAt: 'desc' },
         select: {
           id: true, name: true, email: true, accountType: true,
-          isEmailVerified: true, isBanned: true, createdAt: true, artistProfile: { select: { username: true, status: true } },
-          artistProfile: { select: { artistName: true, username: true, isFeatured: true } },
-          _count: { select: { favorites: true, contactsSent: true } }
+          isEmailVerified: true, isBanned: true, createdAt: true, lastLoginAt: true,
+          artistProfile: {
+            select: {
+              id: true, artistName: true, username: true, isFeatured: true,
+              status: true, stripeAccountId: true, stripeOnboarded: true,
+              _count: { select: { artworks: true } }
+            }
+          },
+          _count: { select: { orders: true } }
         }
       }),
       prisma.user.count({ where }),
     ])
     res.json({ data: users, pagination: { total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) } })
   } catch (err) {
+    console.error(err)
     res.status(500).json({ error: 'Erro ao listar utilizadores' })
+  }
+}
+
+const getUserDetail = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true, name: true, email: true, accountType: true,
+        isEmailVerified: true, isBanned: true, createdAt: true, lastLoginAt: true,
+        country: true, city: true,
+        artistProfile: {
+          select: {
+            id: true, artistName: true, username: true, bio: true,
+            status: true, stripeAccountId: true, stripeOnboarded: true, isFeatured: true,
+            createdAt: true,
+            _count: { select: { artworks: { where: { isDraft: false } }, followers: true } }
+          }
+        },
+        _count: {
+          select: {
+            orders: { where: { status: 'PAID' } },
+            favorites: true,
+            following: true,
+            posts: true
+          }
+        },
+        orders: {
+          where: { status: 'PAID' },
+          select: { amount: true },
+        }
+      }
+    })
+    if (!user) return res.status(404).json({ error: 'Utilizador não encontrado' })
+
+    const totalRevenue = user.orders?.reduce((sum, o) => sum + Number(o.amount || 0), 0) || 0
+    res.json({ ...user, totalRevenue })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Erro' })
   }
 }
 
@@ -177,4 +226,4 @@ const toggleArtistFeatured = async (req, res) => {
   }
 }
 
-module.exports = { adminLogin, getStats, getUsers, banUser, promoteToArtist, getArtworks, toggleFeatured, deleteArtwork, toggleArtistFeatured }
+module.exports = { adminLogin, getStats, getUsers, getUserDetail, banUser, promoteToArtist, getArtworks, toggleFeatured, deleteArtwork, toggleArtistFeatured }

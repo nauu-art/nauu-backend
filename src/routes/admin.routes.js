@@ -3,7 +3,7 @@ const router = express.Router()
 const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
-const { adminLogin, getStats, getUsers, banUser, promoteToArtist, getArtworks, toggleFeatured, deleteArtwork, toggleArtistFeatured } = require('../controllers/admin.controller')
+const { adminLogin, getStats, getUsers, getUserDetail, banUser, promoteToArtist, getArtworks, toggleFeatured, deleteArtwork, toggleArtistFeatured } = require('../controllers/admin.controller')
 const { authenticate } = require('../middleware/auth.middleware')
 
 const requireAdmin = (req, res, next) => {
@@ -30,6 +30,7 @@ const logoUpload = multer({
 router.post('/login', adminLogin)
 router.get('/stats', authenticate, requireAdmin, getStats)
 router.get('/users', authenticate, requireAdmin, getUsers)
+router.get('/users/:id', authenticate, requireAdmin, getUserDetail)
 router.put('/users/:id/ban', authenticate, requireAdmin, banUser)
 
 router.delete('/users/:id', authenticate, requireAdmin, async (req, res) => {
@@ -51,6 +52,18 @@ router.get('/artworks', authenticate, requireAdmin, getArtworks)
 router.put('/artworks/:id/featured', authenticate, requireAdmin, toggleFeatured)
 router.delete('/artworks/:id', authenticate, requireAdmin, deleteArtwork)
 router.put('/artists/:id/featured', authenticate, requireAdmin, toggleArtistFeatured)
+router.put('/artists/:id/approve', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client')
+    const prisma = new PrismaClient()
+    const { status } = req.body // APPROVED, REJECTED, PENDING
+    const artist = await prisma.artistProfile.update({
+      where: { id: req.params.id },
+      data: { status }
+    })
+    res.json(artist)
+  } catch { res.status(500).json({ error: 'Erro' }) }
+})
 
 // GET /api/admin/settings
 router.get('/settings', authenticate, requireAdmin, (req, res) => {

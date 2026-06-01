@@ -29,6 +29,7 @@ model User {
   notifyOnMessage    Boolean   @default(true)
   notifyOnFavorite   Boolean   @default(true)
   createdAt          DateTime  @default(now())
+  lastLoginAt        DateTime?
   updatedAt          DateTime  @updatedAt
 
   artistProfile  ArtistProfile?

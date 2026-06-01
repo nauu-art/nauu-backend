@@ -111,6 +111,7 @@ const login = async (req, res) => {
       return res.status(403).json({ error: 'Verifica o teu email antes de fazer login' });
     }
 
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
     const token = jwt.sign(
       { userId: user.id, accountType: user.accountType },
       process.env.JWT_SECRET,
