@@ -19,6 +19,7 @@ const artistCollectionRoutes = require('./routes/collection_artist.routes')
 const notificationRoutes = require('./routes/notification.routes')
 const messagesRoutes = require('./routes/messages.routes')
 const paymentRoutes = require('./routes/payment.routes')
+const postsGenericRoutes = require('./routes/posts_generic.routes')
 const profileRoutes = require('./routes/profile.routes');
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/artist-collections', artistCollectionRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/payments', paymentRoutes)
+app.use('/api/posts-generic', postsGenericRoutes)
 app.use('/api/profile', profileRoutes);
 
 // Health check

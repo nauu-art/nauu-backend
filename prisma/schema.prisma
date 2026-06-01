@@ -42,6 +42,7 @@ model User {
   readMessages          MessageRead[]     @relation("ReadMessages")
   reportedConversations Conversation[]    @relation("ReportedConversations")
   orders                Order[]           @relation("BuyerOrders")
+  posts                 Post[]
   userFollowing         UserFollow[]      @relation("UserFollower")
   userFollowers         UserFollow[]      @relation("UserFollowing")
 }
@@ -357,6 +358,18 @@ model ArtworkShipping {
   world         Decimal?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  imageUrl  String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Notification {
