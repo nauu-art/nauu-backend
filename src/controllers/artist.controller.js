@@ -206,4 +206,19 @@ const getDashboardStats = async (req, res) => {
   }
 }
 
-module.exports = { getArtists, getArtist, getArtistArtworks, updateProfile, uploadAvatar, uploadCover, getDashboardStats }
+
+const getArtistStats = async (req, res) => {
+  try {
+    const artist = await prisma.artistProfile.findUnique({ where: { username: req.params.username } })
+    if (!artist) return res.status(404).json({ error: 'Artista não encontrado' })
+
+    const [views, favs] = await Promise.all([
+      prisma.artwork.aggregate({ where: { artistId: artist.id }, _sum: { viewCount: true } }),
+      prisma.favorite.count({ where: { artwork: { artistId: artist.id } } })
+    ])
+
+    res.json({ views: views._sum.viewCount || 0, favs })
+  } catch { res.status(500).json({ error: 'Erro' }) }
+}
+
+module.exports = { getArtists, getArtist, getArtistArtworks, updateProfile, uploadAvatar, uploadCover, getDashboardStats, getArtistStats }

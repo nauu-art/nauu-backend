@@ -3,7 +3,7 @@ const express = require('express');
 const { upload } = require('../config/storage');
 const path = require('path');
 const router = express.Router();
-const { getArtists, getArtist, getArtistArtworks, updateProfile, uploadAvatar, uploadCover, getDashboardStats } = require('../controllers/artist.controller');
+const { getArtists, getArtist, getArtistArtworks, updateProfile, uploadAvatar, uploadCover, getDashboardStats, getArtistStats } = require('../controllers/artist.controller');
 const { authenticate, requireArtist } = require('../middleware/auth.middleware');
 
 
@@ -15,6 +15,8 @@ router.get('/:username/artworks', getArtistArtworks);
 router.put('/profile', authenticate, requireArtist, updateProfile);
 router.post('/profile/avatar', authenticate, requireArtist, upload.single('avatar'), uploadAvatar);
 router.post('/profile/cover', authenticate, requireArtist, upload.single('cover'), uploadCover);
+
+router.get('/:username/stats', getArtistStats)
 
 module.exports = router;
 
