@@ -13,6 +13,7 @@ const TYPES = {
   PROFILE_REJECTED: 'PROFILE_REJECTED',
   NEW_MESSAGE: 'NEW_MESSAGE',
   SHIPPING: 'SHIPPING',
+  NEW_COMMENT: 'NEW_COMMENT',
 }
 
 async function notify(userId, type, message, link) {

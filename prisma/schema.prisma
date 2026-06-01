@@ -43,6 +43,9 @@ model User {
   reportedConversations Conversation[]    @relation("ReportedConversations")
   orders                Order[]           @relation("BuyerOrders")
   posts                 Post[]
+  artworkComments       ArtworkComment[]  @relation("ArtworkComments")
+  artworkLikes          ArtworkLike[]     @relation("ArtworkLikes")
+  postComments          PostComment[]     @relation("PostComments")
   userFollowing         UserFollow[]      @relation("UserFollower")
   userFollowers         UserFollow[]      @relation("UserFollowing")
 }
@@ -91,6 +94,7 @@ model ArtistProfile {
   posts            ArtistPost[]
   collections      ArtistCollection[]
   orders           Order[]
+  curatedItems     CuratedItem[]    @relation("CuratedArtists")
 }
 
 
@@ -133,6 +137,9 @@ model Artwork {
   conversations    Conversation[]
   orders           Order[]
   shipping         ArtworkShipping?
+  comments         ArtworkComment[]
+  likes            ArtworkLike[]
+  curatedItems     CuratedItem[]    @relation("CuratedArtworks")
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
   createdAt      DateTime     @default(now())
@@ -370,6 +377,63 @@ model Post {
   published Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  comments  PostComment[]
+}
+
+model ArtworkComment {
+  id        String   @id @default(uuid())
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("ArtworkComments", fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model ArtworkLike {
+  id        String   @id @default(uuid())
+  artworkId String
+  artwork   Artwork  @relation(fields: [artworkId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("ArtworkLikes", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([artworkId, userId])
+}
+
+model PostComment {
+  id        String   @id @default(uuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("PostComments", fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model CuratedCollection {
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  coverImageUrl String?
+  slug         String        @unique
+  published    Boolean       @default(false)
+  position     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  items        CuratedItem[]
+}
+
+model CuratedItem {
+  id           String            @id @default(uuid())
+  collectionId String
+  collection   CuratedCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  artworkId    String?
+  artwork      Artwork?          @relation("CuratedArtworks", fields: [artworkId], references: [id], onDelete: Cascade)
+  artistId     String?
+  artist       ArtistProfile?    @relation("CuratedArtists", fields: [artistId], references: [id], onDelete: Cascade)
+  position     Int               @default(0)
+  createdAt    DateTime          @default(now())
 }
 
 model Notification {
