@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
           orderBy: { position: 'asc' },
           take: 6,
           include: {
-            artwork: { include: { images: { where: { isPrimary: true }, take: 1 }, artist: { select: { artistName: true, username: true } } } },
+            artwork: { include: { images: { where: { isPrimary: true }, take: 1 }, categories: { include: { category: true } }, artist: { select: { id: true, artistName: true, username: true, userId: true, city: true, user: { select: { avatarUrl: true } } } } } },
             artist: { select: { id: true, artistName: true, username: true, user: { select: { avatarUrl: true } }, _count: { select: { artworks: { where: { isDraft: false } } } } } }
           }
         },
@@ -39,6 +39,20 @@ router.get('/admin/all', authenticate, requireAdmin, async (req, res) => {
     })
     res.json(collections)
   } catch { res.status(500).json({ error: 'Erro' }) }
+})
+
+router.get('/admin/:id/items', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const items = await prisma.curatedItem.findMany({
+      where: { collectionId: req.params.id },
+      orderBy: { position: 'asc' },
+      include: {
+        artwork: { select: { id: true, title: true, images: { where: { isPrimary: true }, take: 1, select: { imageUrl: true } }, artist: { select: { artistName: true } } } },
+        artist: { select: { id: true, artistName: true, username: true } }
+      }
+    })
+    res.json(items)
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
 })
 
 router.get('/:slug', async (req, res) => {
