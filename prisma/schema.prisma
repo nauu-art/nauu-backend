@@ -85,7 +85,6 @@ model ArtistProfile {
   stripeAccountId  String?
   stripeOnboarded  Boolean @default(false)
   district          String?
-  commissionPercent Decimal @default(5.00)
   createdAt      DateTime @default(now())
 
   artworks         Artwork[]
@@ -133,6 +132,8 @@ model Artwork {
   availability   Availability @default(AVAILABLE)
   isFeatured       Boolean      @default(false)
   isDraft          Boolean      @default(false)
+  commissionPercent     Decimal?  @default(5)
+  stock                 Int?      @default(1)
   collectionId     String?
   collection       ArtistCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   conversations    Conversation[]

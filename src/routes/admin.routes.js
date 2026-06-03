@@ -103,7 +103,7 @@ router.post('/logo', authenticate, requireAdmin, logoUpload.single('logo'), asyn
   }
 })
 
-module.exports = router
+// module.exports moved to end
 
 // Conteúdo editável
 const { PrismaClient: PC2 } = require('@prisma/client')
@@ -190,3 +190,13 @@ router.post('/blog/:key/cover', authenticate, requireAdmin, uploadCoverLocal.sin
 })
 
 module.exports = router
+
+// Rota pública para conteúdo legal
+router.get('/public/content/:key', async (req, res) => {
+  try {
+    const { PrismaClient: PC4 } = require('@prisma/client')
+    const p = new PC4()
+    const content = await p.siteContent.findUnique({ where: { key: req.params.key } })
+    res.json(content || { key: req.params.key, title: '', content: '' })
+  } catch { res.status(500).json({ error: 'Erro' }) }
+})

@@ -86,7 +86,7 @@ const getArtwork = async (req, res) => {
         artist: {
           select: {
             id: true, artistName: true, username: true, userId: true,
-            stripeOnboarded: true, commissionPercent: true,
+            stripeOnboarded: true,
             user: { select: { avatarUrl: true, id: true } },
             city: true, country: true, bio: true, contactEmail: true,
           },
@@ -115,6 +115,8 @@ const createArtwork = async (req, res) => {
       price: req.body.price ? Number(req.body.price) : undefined,
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
+      ...(req.body.stock !== undefined && { stock: parseInt(req.body.stock) || 1 }),
+      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 5 }),
       collectionId: req.body.collectionId || null,
     })
 
@@ -163,6 +165,8 @@ const updateArtwork = async (req, res) => {
       price: req.body.price ? Number(req.body.price) : undefined,
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
+      ...(req.body.stock !== undefined && { stock: parseInt(req.body.stock) || 1 }),
+      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 5 }),
       collectionId: req.body.collectionId || null,
     })
 

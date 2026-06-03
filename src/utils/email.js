@@ -153,6 +153,58 @@ const sendEmail2 = async ({ to, subject, html }) => {
   })
 }
 
+
+const sendOrderConfirmationBuyer = async (email, { buyerName, artworkTitle, artistName, price, address, orderId }) => {
+  const addressStr = address ? `${address.street}, ${address.city}, ${address.postalCode}, ${address.country}` : 'Não fornecida'
+  await sendEmail({
+    to: email,
+    subject: `nauu.art — Confirmação de compra: ${artworkTitle}`,
+    html: baseTemplate(`
+      <h2>Compra confirmada! 🎉</h2>
+      <p>Olá, <strong>${buyerName}</strong>! O teu pagamento foi processado com sucesso.</p>
+      <div class="highlight">
+        <strong>${artworkTitle}</strong><br>
+        por ${artistName}<br>
+        <strong>€ ${price}</strong>
+      </div>
+      <p><strong>Morada de entrega:</strong><br>${addressStr}</p>
+      <p>O artista irá contactar-te em breve para combinar a entrega da obra. Podes acompanhar a tua encomenda no nauu.art.</p>
+      <a href="${process.env.FRONTEND_URL}/account/orders" class="btn">Ver as minhas encomendas</a>
+      <p class="meta">Referência da encomenda: ${orderId}</p>
+    `),
+  })
+}
+
+const sendOrderNotificationArtist = async (email, { artistName, buyerName, buyerEmail, artworkTitle, price, address, orderId }) => {
+  const addressStr = address ? `
+    <p><strong>Morada de entrega:</strong></p>
+    <div class="highlight">
+      ${address.name || buyerName}<br>
+      ${address.street}<br>
+      ${address.postalCode} ${address.city}<br>
+      ${address.country}<br>
+      ${address.phone ? `Tel: ${address.phone}` : ''}
+    </div>
+  ` : ''
+  await sendEmail({
+    to: email,
+    subject: `nauu.art — Nova venda: ${artworkTitle}`,
+    html: baseTemplate(`
+      <h2>Vendeste uma obra! 🎨</h2>
+      <p>Olá, <strong>${artistName}</strong>! Tens uma nova venda no nauu.art.</p>
+      <div class="highlight">
+        <strong>${artworkTitle}</strong><br>
+        Comprador: ${buyerName} (${buyerEmail})<br>
+        <strong>€ ${price}</strong>
+      </div>
+      ${addressStr}
+      <p>O pagamento está a ser processado pela Stripe. O valor será transferido para a tua conta nos próximos dias.</p>
+      <a href="${process.env.FRONTEND_URL}/dashboard" class="btn">Ver o dashboard</a>
+      <p class="meta">Referência da encomenda: ${orderId}</p>
+    `),
+  })
+}
+
 module.exports = {
   sendEmail,
   sendVerificationEmail,
@@ -161,4 +213,6 @@ module.exports = {
   sendContactConfirmation,
   sendWelcomeArtist,
   sendWelcomeUser,
+  sendOrderConfirmationBuyer,
+  sendOrderNotificationArtist,
 }

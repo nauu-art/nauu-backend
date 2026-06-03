@@ -3,6 +3,7 @@ const router = express.Router()
 const { authenticate, requireArtist } = require('../middleware/auth.middleware')
 const { PrismaClient } = require('@prisma/client')
 const { notify } = require('../utils/notify')
+const { sendOrderConfirmationBuyer, sendOrderNotificationArtist } = require('../utils/email')
 const Stripe = require('stripe')
 const prisma = new PrismaClient()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -77,7 +78,7 @@ router.post('/intent', authenticate, async (req, res) => {
 
     const artwork = await prisma.artwork.findUnique({
       where: { id: artworkId },
-      include: { artist: { include: { user: true } } }
+      include: { artist: { include: { user: true } }, shipping: true }
     })
 
     if (!artwork) return res.status(404).json({ error: 'Obra não encontrada' })
@@ -87,7 +88,8 @@ router.post('/intent', authenticate, async (req, res) => {
     if (artwork.artist.userId === req.user.id) return res.status(400).json({ error: 'Não podes comprar a tua própria obra' })
 
     const amount = parseFloat(artwork.price)
-    const commissionRate = parseFloat(artwork.artist.commissionPercent || PLATFORM_FEE)
+    const rawRate = parseFloat(artwork.commissionPercent || artwork.artist.commissionPercent || PLATFORM_FEE)
+    const commissionRate = rawRate > 1 ? rawRate / 100 : rawRate
     const platformFee = Math.round(amount * commissionRate * 100) / 100
     const artistAmount = Math.round((amount - platformFee) * 100) / 100
     const amountCents = Math.round(amount * 100)
@@ -96,8 +98,8 @@ router.post('/intent', authenticate, async (req, res) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: 'eur',
-      application_fee_amount: feeCents,
-      transfer_data: { destination: artwork.artist.stripeAccountId },
+      // application_fee_amount: feeCents, // TODO: activar quando Connect estiver configurado
+      // transfer_data: { destination: artwork.artist.stripeAccountId }, // TODO: activar quando Connect estiver configurado
       metadata: {
         artworkId,
         buyerId: req.user.id,
@@ -152,9 +154,13 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           data: { status: 'PAID', paidAt: new Date() }
         })
         // Marcar obra como reservada
-        await prisma.artwork.update({ where: { id: order.artworkId }, data: { availability: 'RESERVED' } })
+        // Decrementar stock e marcar disponibilidade
+        const artworkData = await prisma.artwork.findUnique({ where: { id: order.artworkId }, select: { stock: true } })
+        const newStock = artworkData.stock !== null ? Math.max(0, (artworkData.stock || 1) - 1) : null
+        const newAvailability = newStock === 0 ? 'SOLD' : newStock === null ? 'RESERVED' : newStock > 0 ? 'AVAILABLE' : 'SOLD'
+        await prisma.artwork.update({ where: { id: order.artworkId }, data: { availability: newAvailability, ...(newStock !== null && { stock: newStock }) } })
         // Notificar artista
-        const artwork = await prisma.artwork.findUnique({ where: { id: order.artworkId }, select: { title: true, artist: { select: { userId: true } } } })
+        const artwork = await prisma.artwork.findUnique({ where: { id: order.artworkId }, select: { title: true, artist: { select: { userId: true, artistName: true, user: { select: { email: true } } } } } })
         const buyer = await prisma.user.findUnique({ where: { id: order.buyerId }, select: { name: true } })
         await notify(artwork.artist.userId, 'NEW_ORDER', `${buyer.name} comprou "${artwork.title}"!`, `/dashboard/orders`)
         // Notificar comprador
