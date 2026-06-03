@@ -190,9 +190,14 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         // Mensagem automática entre artista e comprador
         try {
           const { createOrGetConversation } = require('../utils/conversations')
-          const conv = await createOrGetConversation(order.buyerId, artwork.artist.userId)
+          const conv = await createOrGetConversation(order.buyerId, artwork.artist.userId, order.artworkId)
           const { PrismaClient: PC } = require('@prisma/client')
           const p = new PC()
+          // Associar a order à conversa
+          await p.conversation.update({
+            where: { id: conv.id },
+            data: { orders: { connect: { id: order.id } } }
+          }).catch(() => {})
           await p.message.create({
             data: {
               conversationId: conv.id,
