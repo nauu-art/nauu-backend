@@ -1,13 +1,15 @@
 const nodemailer = require('nodemailer')
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
+const getTransporter = () => nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT) || 587,
   secure: false,
+  family: 4,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: { rejectUnauthorized: false }
 })
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 285.42 102.94" width="120" height="43">
@@ -54,7 +56,7 @@ const baseTemplate = (content) => `
 </html>`
 
 const sendEmail = async ({ to, subject, html }) => {
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.EMAIL_FROM,
     to,
     subject,
@@ -145,7 +147,7 @@ const sendWelcomeUser = async (email, name) => {
 }
 
 const sendEmail2 = async ({ to, subject, html }) => {
-  await transporter.sendMail({
+  await getTransporter().sendMail({
     from: process.env.EMAIL_FROM,
     to,
     subject,

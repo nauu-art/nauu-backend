@@ -60,6 +60,8 @@ const authLimiter = rateLimit({
   message: { error: 'Demasiadas tentativas. Tenta em 15 minutos.' },
 });
 
+// Raw body para webhook Stripe — tem de ser antes do express.json
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }))
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

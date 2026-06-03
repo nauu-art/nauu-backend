@@ -161,10 +161,46 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         await prisma.artwork.update({ where: { id: order.artworkId }, data: { availability: newAvailability, ...(newStock !== null && { stock: newStock }) } })
         // Notificar artista
         const artwork = await prisma.artwork.findUnique({ where: { id: order.artworkId }, select: { title: true, artist: { select: { userId: true, artistName: true, user: { select: { email: true } } } } } })
-        const buyer = await prisma.user.findUnique({ where: { id: order.buyerId }, select: { name: true } })
+        const buyer = await prisma.user.findUnique({ where: { id: order.buyerId }, select: { name: true, email: true } })
         await notify(artwork.artist.userId, 'NEW_ORDER', `${buyer.name} comprou "${artwork.title}"!`, `/dashboard/orders`)
-        // Notificar comprador
         await notify(order.buyerId, 'ORDER_PAID', `Pagamento confirmado para "${artwork.title}"`, `/account/orders`)
+
+        // Emails
+        try {
+          const shippingAddress = order.shippingAddress ? JSON.parse(order.shippingAddress) : null
+          await sendOrderConfirmationBuyer(buyer.email, {
+            buyerName: buyer.name,
+            artworkTitle: artwork.title,
+            artistName: artwork.artist.artistName,
+            price: Number(order.amount).toFixed(2),
+            address: shippingAddress,
+            orderId: order.id.slice(0, 8).toUpperCase()
+          })
+          await sendOrderNotificationArtist(artwork.artist.user.email, {
+            artistName: artwork.artist.artistName,
+            buyerName: buyer.name,
+            buyerEmail: buyer.email,
+            artworkTitle: artwork.title,
+            price: Number(order.amount).toFixed(2),
+            address: shippingAddress,
+            orderId: order.id.slice(0, 8).toUpperCase()
+          })
+        } catch (emailErr) { console.error('Erro emails:', emailErr.message) }
+
+        // Mensagem automática entre artista e comprador
+        try {
+          const { createOrGetConversation } = require('../utils/conversations')
+          const conv = await createOrGetConversation(order.buyerId, artwork.artist.userId)
+          const { PrismaClient: PC } = require('@prisma/client')
+          const p = new PC()
+          await p.message.create({
+            data: {
+              conversationId: conv.id,
+              senderId: artwork.artist.userId,
+              content: `Olá! O pagamento da obra "${artwork.title}" foi confirmado. Entrarei em contacto em breve para combinar a entrega. Obrigado pela compra! 🎨`
+            }
+          })
+        } catch (msgErr) { console.error('Erro mensagem automática:', msgErr.message) }
       }
     } catch (err) { console.error('Webhook handler error:', err) }
   }
