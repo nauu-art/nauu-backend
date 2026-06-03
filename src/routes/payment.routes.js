@@ -197,7 +197,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             data: {
               conversationId: conv.id,
               senderId: artwork.artist.userId,
-              content: `Olá! O pagamento da obra "${artwork.title}" foi confirmado. Entrarei em contacto em breve para combinar a entrega. Obrigado pela compra! 🎨`
+              content: `🎉 Pagamento confirmado!\n\nOlá! O pagamento da obra **${artwork.title}** foi confirmado com sucesso.\n\n👉 Ver obra: https://nauu.art/artwork/${order.artworkId}\n\nEntrarei em contacto em breve para combinar a entrega. Se tiveres alguma dúvida, responde a esta mensagem.\n\nObrigado pela compra! 🎨`
             }
           })
         } catch (msgErr) { console.error('Erro mensagem automática:', msgErr.message) }
