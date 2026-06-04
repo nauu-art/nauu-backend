@@ -211,6 +211,7 @@ model Collection {
   name        String
   description String?
   isPublic    Boolean  @default(false)
+  isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   items       CollectionItem[]
 }
