@@ -237,7 +237,7 @@ router.get('/sales', authenticate, requireArtist, async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: {
         artwork: { select: { id: true, title: true, images: { where: { isPrimary: true }, take: 1 } } },
-        buyer: { select: { name: true, email: true } }
+        buyer: { select: { id: true, name: true, email: true } }
       }
     })
     res.json(orders)
@@ -271,4 +271,51 @@ router.get('/shipping/:artworkId', async (req, res) => {
     const shipping = await prisma.artworkShipping.findUnique({ where: { artworkId: req.params.artworkId } })
     res.json(shipping || { freeShipping: false, portugal: null, europe: null, world: null })
   } catch { res.status(500).json({ error: 'Erro' }) }
+})
+
+// PUT /api/payments/orders/:id/status — artista actualiza estado da encomenda
+router.put('/orders/:id/status', authenticate, requireArtist, async (req, res) => {
+  try {
+    const { fulfillmentStatus, trackingNumber, trackingUrl } = req.body
+    const artist = await prisma.artistProfile.findUnique({ where: { userId: req.user.id } })
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, artistId: artist.id },
+      include: {
+        buyer: { select: { id: true, name: true, email: true } },
+        artwork: { select: { title: true } }
+      }
+    })
+    if (!order) return res.status(404).json({ error: 'Encomenda não encontrada' })
+
+    const data = { fulfillmentStatus, updatedAt: new Date() }
+    if (trackingNumber) data.trackingNumber = trackingNumber
+    if (trackingUrl) data.trackingUrl = trackingUrl
+    if (fulfillmentStatus === 'SHIPPED') data.shippedAt = new Date()
+    if (fulfillmentStatus === 'DELIVERED') data.deliveredAt = new Date()
+
+    await prisma.order.update({ where: { id: order.id }, data })
+
+    // Notificações automáticas ao comprador
+    const messages = {
+      PROCESSING: `A tua encomenda "${order.artwork.title}" está a ser preparada para envio.`,
+      SHIPPED: `A tua encomenda "${order.artwork.title}" foi enviada!${trackingNumber ? ` Nº tracking: ${trackingNumber}` : ''}`,
+      DELIVERED: `A tua encomenda "${order.artwork.title}" foi marcada como entregue. Confirmas a receção?`,
+      CANCELLED: `A encomenda "${order.artwork.title}" foi cancelada.`
+    }
+    if (messages[fulfillmentStatus]) {
+      await notify(order.buyer.id, 'ORDER_UPDATE', messages[fulfillmentStatus], `/account/orders`)
+      // Mensagem na conversa se existir
+      if (order.conversationId) {
+        await prisma.message.create({
+          data: {
+            conversationId: order.conversationId,
+            senderId: req.user.id,
+            content: `📦 ${messages[fulfillmentStatus]}`
+          }
+        })
+      }
+    }
+
+    res.json({ ok: true })
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
 })

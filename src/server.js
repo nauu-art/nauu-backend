@@ -53,11 +53,16 @@ app.use(rateLimit({
   skip: (req) => req.ip === '127.0.0.1' || req.ip === '::1',
 }));
 
-// Rate limiting estrito para autenticação
+// Rate limiting estrito só para login/register
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { error: 'Demasiadas tentativas. Tenta em 15 minutos.' },
+  skip: (req) => {
+    // Não limitar /me, /logout, /refresh — só login e register
+    const freeRoutes = ['/me', '/logout', '/refresh', '/change-password', '/profile']
+    return freeRoutes.some(r => req.path.startsWith(r))
+  }
 });
 
 // Raw body para webhook Stripe — tem de ser antes do express.json

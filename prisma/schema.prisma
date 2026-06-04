@@ -344,6 +344,7 @@ model Order {
   conversationId        String?
   conversation          Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
   status                String   @default("PENDING")
+  fulfillmentStatus     String   @default("PAID")
   amount                Decimal
   platformFee           Decimal
   artistAmount          Decimal
@@ -351,8 +352,12 @@ model Order {
   stripePaymentIntentId String?
   stripeTransferId      String?
   shippingAddress       String?
+  trackingNumber        String?
+  trackingUrl           String?
   notes                 String?
   paidAt                DateTime?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
