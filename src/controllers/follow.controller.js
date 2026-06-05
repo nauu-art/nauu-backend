@@ -65,28 +65,47 @@ const getFeed = async (req, res) => {
     const { page = 1, limit = 12 } = req.query
     const skip = (Number(page) - 1) * Number(limit)
 
+    // Artistas seguidos
     const following = await prisma.follow.findMany({
       where: { followerId: req.user.id },
       select: { artistId: true }
     })
-
     const artistIds = following.map(f => f.artistId)
+    // Buscar userIds dos artistas seguidos
+    const artists = artistIds.length > 0 ? await prisma.artistProfile.findMany({
+      where: { id: { in: artistIds } },
+      select: { userId: true }
+    }) : []
+    const artistUserIds = artists.map(a => a.userId).filter(Boolean)
 
-    if (artistIds.length === 0) {
-      return res.json({ data: [], pagination: { total: 0, page: 1, totalPages: 0 } })
-    }
+    // Users normais seguidos
+    const userFollowing = await prisma.userFollow.findMany({
+      where: { followerId: req.user.id },
+      select: { followingId: true }
+    }).catch(() => [])
+    const followingUserIds = userFollowing.map(f => f.followingId)
 
-    // Incluir posts dos artistas seguidos no feed
-    const posts = await prisma.artistPost.findMany({
-      where: { artistId: { in: artistIds }, published: true },
+    // Todos os userIds cujos posts queremos ver
+    const allUserIds = [...new Set([...artistUserIds, ...followingUserIds])]
+
+    // Posts de todos os seguidos (artistas + users normais)
+    const posts = allUserIds.length > 0 ? await prisma.post.findMany({
+      where: { userId: { in: allUserIds }, published: true },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: 10,
       include: {
-        artist: {
-          select: { id: true, artistName: true, username: true, user: { select: { avatarUrl: true } } }
+        user: {
+          select: {
+            id: true, name: true, username: true, avatarUrl: true,
+            artistProfile: { select: { artistName: true, username: true } }
+          }
         }
       }
-    })
+    }) : []
+
+    if (artistIds.length === 0) {
+      return res.json({ data: [], posts, pagination: { total: 0, page: 1, totalPages: 0 } })
+    }
 
     const [artworks, total] = await Promise.all([
       prisma.artwork.findMany({
@@ -110,6 +129,7 @@ const getFeed = async (req, res) => {
 
     res.json({ data: artworks, posts, pagination: { total, page: Number(page), totalPages: Math.ceil(total / Number(limit)) } })
   } catch (err) {
+    console.error(err)
     res.status(500).json({ error: 'Erro ao obter feed' })
   }
 }

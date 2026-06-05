@@ -20,6 +20,7 @@ const notificationRoutes = require('./routes/notification.routes')
 const messagesRoutes = require('./routes/messages.routes')
 const paymentRoutes = require('./routes/payment.routes')
 const postsGenericRoutes = require('./routes/posts_generic.routes')
+const postsRoutes = require('./routes/posts.routes')
 const interactionsRoutes = require('./routes/interactions.routes')
 const profileRoutes = require('./routes/profile.routes');
 
@@ -87,6 +88,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/messages', messagesRoutes)
 app.use('/api/payments', paymentRoutes)
 app.use('/api/posts-generic', postsGenericRoutes)
+app.use('/api/posts', postsRoutes)
 app.use('/api/interactions', interactionsRoutes)
 app.use('/api/profile', profileRoutes);
 const curatedRoutes = require('./routes/curated.routes')

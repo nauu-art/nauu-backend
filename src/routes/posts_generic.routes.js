@@ -52,12 +52,12 @@ router.post('/', authenticate, async (req, res) => {
           // Buscar seguidores com newsletter activa
           const subscriptions = await prisma.follow.findMany({
             where: { artistId: artist?.id },
-            include: { user: { select: { email: true, name: true } } }
+            include: { follower: { select: { email: true, name: true } } }
           })
           const authorName = artist?.artistName || (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name
           const postUrl = `${process.env.FRONTEND_URL}/posts/${post.id}`
           // Enviar em lotes de 50
-          const followers = subscriptions.map(s => s.user).filter(u => u.email)
+          const followers = subscriptions.map(s => s.follower).filter(u => u.email)
           for (let i = 0; i < followers.length; i += 50) {
             const batch = followers.slice(i, i + 50)
             await Promise.allSettled(batch.map(f => sendEmail({
@@ -171,3 +171,27 @@ router.get('/feed', authenticate, async (req, res) => {
 })
 
 module.exports = router
+
+// GET /api/posts-generic/unsubscribe/:artistId — cancelar subscrição de newsletter
+router.get('/unsubscribe/:artistId', async (req, res) => {
+  try {
+    const { token } = req.query
+    if (!token) return res.status(400).send('Token inválido')
+    const email = Buffer.from(token, 'base64').toString('utf8')
+    const user = await prisma.user.findFirst({ where: { email } })
+    if (!user) return res.status(404).send('Utilizador não encontrado')
+    // Marcar como não subscrito
+    await prisma.newsletterSubscription.upsert({
+      where: { followerId_artistId: { followerId: user.id, artistId: req.params.artistId } },
+      update: { isSubscribed: false },
+      create: { followerId: user.id, artistId: req.params.artistId, isSubscribed: false }
+    })
+    res.send(`
+      <html><body style="font-family:sans-serif;max-width:400px;margin:80px auto;text-align:center;">
+        <h2>✅ Subscrição cancelada</h2>
+        <p>Deixaste de receber emails deste artista.<br>Podes continuar a seguir as suas obras no nauu.art.</p>
+        <a href="${process.env.FRONTEND_URL}" style="color:#1A7FD4;">Voltar ao nauu.art</a>
+      </body></html>
+    `)
+  } catch (err) { console.error(err); res.status(500).send('Erro') }
+})
