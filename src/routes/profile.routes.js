@@ -11,13 +11,10 @@ router.get('/:username', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { username: req.params.username },
-      select: {
-        id: true, name: true, username: true, avatarUrl: true,
-        bio: true, city: true, country: true, accountType: true, accountSubtype: true,
-        createdAt: true,
+      include: {
         artistProfile: {
           select: {
-            id: true, artistName: true, status: true, isFeatured: true,
+            id: true, artistName: true, username: true, status: true, isFeatured: true,
             categories: { include: { category: { select: { name: true } } } },
             _count: { select: { artworks: { where: { isDraft: false } } } }
           }
@@ -25,7 +22,20 @@ router.get('/:username', async (req, res) => {
         collections: {
           where: { isPublic: true },
           take: 6,
-          include: { items: { take: 3, include: { artwork: { include: { images: { where: { isPrimary: true }, take: 1 } } } } } }
+          include: { items: { take: 4, include: { artwork: { include: { images: { where: { isPrimary: true }, take: 1 } } } } } }
+        },
+        favorites: {
+          take: 12,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            artwork: {
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+                artist: { select: { artistName: true, username: true, userId: true, user: { select: { avatarUrl: true } } } },
+                categories: { include: { category: true } }
+              }
+            }
+          }
         },
         _count: {
           select: {
