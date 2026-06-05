@@ -43,6 +43,7 @@ model User {
   readMessages          MessageRead[]     @relation("ReadMessages")
   reportedConversations Conversation[]    @relation("ReportedConversations")
   orders                Order[]           @relation("BuyerOrders")
+  newsletterSubscriptions NewsletterSubscription[]
   posts                 Post[]
   artworkComments       ArtworkComment[]  @relation("ArtworkComments")
   artworkLikes          ArtworkLike[]     @relation("ArtworkLikes")
@@ -94,6 +95,7 @@ model ArtistProfile {
   posts            ArtistPost[]
   collections      ArtistCollection[]
   orders           Order[]
+  newsletterSubscriptions NewsletterSubscription[]
   curatedItems     CuratedItem[]    @relation("CuratedArtists")
 }
 
@@ -376,16 +378,30 @@ model ArtworkShipping {
 }
 
 model Post {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  content   String
-  imageUrl  String?
-  published Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  comments  PostComment[]
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  content           String
+  imageUrl          String?
+  mediaUrls         String   @default("[]")
+  published         Boolean  @default(true)
+  sentAsNewsletter  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  comments          PostComment[]
+}
+
+model NewsletterSubscription {
+  id           String        @id @default(uuid())
+  followerId   String
+  follower     User          @relation(fields: [followerId], references: [id], onDelete: Cascade)
+  artistId     String
+  artist       ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  isSubscribed Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+
+  @@unique([followerId, artistId])
 }
 
 model ArtworkComment {

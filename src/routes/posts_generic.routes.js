@@ -33,14 +33,64 @@ router.get('/my', authenticate, async (req, res) => {
 // POST /api/posts — criar post
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { title, content, published } = req.body
+    const { title, content, published, sendNewsletter } = req.body
     if (!title || !content) return res.status(400).json({ error: 'Título e conteúdo obrigatórios' })
     const post = await prisma.post.create({
-      data: { userId: req.user.id, title, content, published: published !== false }
+      data: { userId: req.user.id, title, content, published: published !== false, sentAsNewsletter: sendNewsletter === true },
     })
-    res.json(post)
-  } catch { res.status(500).json({ error: 'Erro' }) }
+
+    // Enviar newsletter em background se pedido
+    if (sendNewsletter && published !== false) {
+      setImmediate(async () => {
+        try {
+          const { sendEmail } = require('../utils/email')
+          // Buscar artista
+          const artist = await prisma.artistProfile.findUnique({
+            where: { userId: req.user.id },
+            select: { id: true, artistName: true, username: true }
+          })
+          // Buscar seguidores com newsletter activa
+          const subscriptions = await prisma.follow.findMany({
+            where: { artistId: artist?.id },
+            include: { user: { select: { email: true, name: true } } }
+          })
+          const authorName = artist?.artistName || (await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true } }))?.name
+          const postUrl = `${process.env.FRONTEND_URL}/posts/${post.id}`
+          // Enviar em lotes de 50
+          const followers = subscriptions.map(s => s.user).filter(u => u.email)
+          for (let i = 0; i < followers.length; i += 50) {
+            const batch = followers.slice(i, i + 50)
+            await Promise.allSettled(batch.map(f => sendEmail({
+              to: f.email,
+              subject: `${authorName} publicou: ${title}`,
+              html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+                <h2>${title}</h2>
+                <p>Olá ${f.name},</p>
+                <p>${authorName} publicou um novo post no nauu.art.</p>
+                <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:16px 0;">
+                  ${content.replace(/<[^>]*>/g, '').slice(0, 300)}…
+                </div>
+                <a href="${postUrl}" style="background:#1A7FD4;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
+                  Ler post completo
+                </a>
+                <hr style="margin:24px 0;border:none;border-top:1px solid #eee;">
+                <p style="font-size:12px;color:#999;">
+                  Recebeste este email porque segues ${authorName} no nauu.art.<br>
+                  <a href="${process.env.FRONTEND_URL}/unsubscribe/${artist?.id}?token=${Buffer.from(f.email).toString('base64')}">Cancelar subscrição</a>
+                </p>
+              </div>`
+            })))
+          }
+          console.log(`Newsletter enviada para ${followers.length} seguidores`)
+        } catch (err) { console.error('Erro newsletter:', err.message) }
+      })
+    }
+
+    res.status(201).json(post)
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro ao criar post' }) }
 })
+
+
 
 // PUT /api/posts/:id — editar post
 router.put('/:id', authenticate, async (req, res) => {
