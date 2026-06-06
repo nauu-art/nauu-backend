@@ -170,6 +170,25 @@ router.get('/feed', authenticate, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
 })
 
+
+// POST /api/posts-generic/:id/media — upload múltiplas imagens
+router.post('/:id/media', authenticate, upload.array('images', 10), async (req, res) => {
+  try {
+    if (!req.files?.length) return res.status(400).json({ error: 'Nenhuma imagem' })
+    const post = await prisma.post.findFirst({ where: { id: req.params.id, userId: req.user.id } })
+    if (!post) return res.status(404).json({ error: 'Post não encontrado' })
+    const urls = await Promise.all(req.files.map(f => processImage(f.buffer, 'posts')))
+    const existing = JSON.parse(post.mediaUrls || '[]')
+    const updated = [...existing, ...urls]
+    // Primeira imagem também vai para imageUrl (capa)
+    await prisma.post.update({
+      where: { id: req.params.id },
+      data: { mediaUrls: JSON.stringify(updated), imageUrl: updated[0] || post.imageUrl }
+    })
+    res.json({ mediaUrls: updated })
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Erro' }) }
+})
+
 module.exports = router
 
 // GET /api/posts-generic/unsubscribe/:artistId — cancelar subscrição de newsletter
