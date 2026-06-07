@@ -92,6 +92,18 @@ router.post('/', authenticate, async (req, res) => {
 
 
 
+// GET /api/posts-generic/:id — detalhe de um post
+router.get('/:id', async (req, res) => {
+  try {
+    const post = await prisma.post.findUnique({
+      where: { id: req.params.id },
+      include: { user: { select: { id: true, name: true, username: true, avatarUrl: true, artistProfile: { select: { artistName: true, username: true } } } } }
+    })
+    if (!post || !post.published) return res.status(404).json({ error: 'Post não encontrado' })
+    res.json(post)
+  } catch { res.status(500).json({ error: 'Erro' }) }
+})
+
 // PUT /api/posts/:id — editar post
 router.put('/:id', authenticate, async (req, res) => {
   try {
