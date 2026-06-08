@@ -49,6 +49,7 @@ const getArtworks = async (req, res) => {
       if (minPrice) where.price.gte = Number(minPrice)
       if (maxPrice) where.price.lte = Number(maxPrice)
     }
+    if (req.query.artistUsername) where.artist = { ...where.artist, username: req.query.artistUsername }
     if (category) where.categories = { some: { category: { slug: category } } }
     if (req.query.categories) {
       const slugs = req.query.categories.split(',').filter(Boolean)
