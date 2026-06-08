@@ -8,7 +8,7 @@ const Stripe = require('stripe')
 const prisma = new PrismaClient()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-const PLATFORM_FEE = parseFloat(process.env.PLATFORM_COMMISSION_PERCENT || 5) / 100
+const PLATFORM_FEE = parseFloat(process.env.PLATFORM_COMMISSION_PERCENT || 3) / 100
 
 // GET /api/payments/config — chave pública para o frontend
 router.get('/config', (req, res) => {
@@ -73,7 +73,7 @@ router.get('/connect/status', authenticate, requireArtist, async (req, res) => {
 // POST /api/payments/intent — criar PaymentIntent
 router.post('/intent', authenticate, async (req, res) => {
   try {
-    const { artworkId, shippingAddress, notes } = req.body
+    const { artworkId, shippingAddress, notes, shippingCost: rawShippingCost } = req.body
     if (!artworkId) return res.status(400).json({ error: 'Obra obrigatória' })
 
     const artwork = await prisma.artwork.findUnique({
@@ -87,19 +87,24 @@ router.post('/intent', authenticate, async (req, res) => {
     if (!artwork.artist.stripeAccountId || !artwork.artist.stripeOnboarded) return res.status(400).json({ error: 'Artista ainda não configurou pagamentos' })
     if (artwork.artist.userId === req.user.id) return res.status(400).json({ error: 'Não podes comprar a tua própria obra' })
 
-    const amount = parseFloat(artwork.price)
+    const artworkPrice = parseFloat(artwork.price)
+    const shippingCost = parseFloat(rawShippingCost || 0)
+    const totalAmount = artworkPrice + shippingCost
     const rawRate = parseFloat(artwork.commissionPercent || artwork.artist.commissionPercent || PLATFORM_FEE)
     const commissionRate = rawRate > 1 ? rawRate / 100 : rawRate
-    const platformFee = Math.round(amount * commissionRate * 100) / 100
-    const artistAmount = Math.round((amount - platformFee) * 100) / 100
-    const amountCents = Math.round(amount * 100)
-    const feeCents = Math.round(platformFee * 100)
+    const platformFee = Math.round(artworkPrice * commissionRate * 100) / 100
+    // Stripe fee (1.5% + €0.25) is charged to the artist so nauu receives clean commission
+    const stripeFee = Math.round((totalAmount * 0.015 + 0.25) * 100) / 100
+    const totalFee = platformFee + stripeFee
+    const artistAmount = Math.round((totalAmount - totalFee) * 100) / 100
+    const amountCents = Math.round(totalAmount * 100)
+    const feeCents = Math.round(totalFee * 100)
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountCents,
       currency: 'eur',
-      // application_fee_amount: feeCents, // TODO: activar quando Connect estiver configurado
-      // transfer_data: { destination: artwork.artist.stripeAccountId }, // TODO: activar quando Connect estiver configurado
+      application_fee_amount: feeCents,
+      transfer_data: { destination: artwork.artist.stripeAccountId },
       metadata: {
         artworkId,
         buyerId: req.user.id,
@@ -113,7 +118,7 @@ router.post('/intent', authenticate, async (req, res) => {
         buyerId: req.user.id,
         artistId: artwork.artist.id,
         artworkId,
-        amount,
+        amount: totalAmount,
         platformFee,
         artistAmount,
         stripePaymentIntentId: paymentIntent.id,
@@ -125,7 +130,7 @@ router.post('/intent', authenticate, async (req, res) => {
     res.json({
       clientSecret: paymentIntent.client_secret,
       orderId: order.id,
-      amount,
+      amount: totalAmount,
       platformFee,
       artistAmount,
       artwork: { title: artwork.title, price: artwork.price }

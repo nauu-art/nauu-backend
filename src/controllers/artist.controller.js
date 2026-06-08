@@ -6,7 +6,7 @@ const getArtists = async (req, res) => {
   try {
     const { page = 1, limit = 20, search, category, city, country, sort = 'createdAt_desc' } = req.query
     const skip = (Number(page) - 1) * Number(limit)
-    const where = { status: 'APPROVED', user: { isBanned: false } }
+    const where = { status: 'APPROVED', user: { is: { isBanned: false } } }
     if (search) {
       where.OR = [
         { artistName: { contains: search, mode: 'insensitive' } },
@@ -25,7 +25,7 @@ const getArtists = async (req, res) => {
     if (category) where.categories = { some: { category: { slug: category } } }
     // Filtro por distrito — filtra pelos concelhos do distrito
     if (req.query.district) {
-      const { DISTRITOS_CONCELHOS } = require('../../frontend/lib/portugal') || {}
+      
       // Fallback manual dos concelhos principais
       const districtMap = {
         'Aveiro': ['Aveiro','Santa Maria da Feira','São João da Madeira','Oliveira de Azeméis','Ovar','Espinho','Estarreja','Ílhavo','Águeda','Mealhada'],
