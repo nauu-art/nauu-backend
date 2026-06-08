@@ -17,6 +17,8 @@ const artworkSchema = z.object({
   collectionId: z.string().nullable().optional(),
   availability: z.enum(['AVAILABLE', 'SOLD', 'RESERVED']).default('AVAILABLE'),
   categoryIds: z.array(z.string()).optional(),
+  stock: z.number().int().min(1).optional(),
+  commissionPercent: z.number().min(3).max(90).optional(),
 })
 
 const getArtworks = async (req, res) => {
@@ -116,7 +118,7 @@ const createArtwork = async (req, res) => {
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
       ...(req.body.stock !== undefined && { stock: parseInt(req.body.stock) || 1 }),
-      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 5 }),
+      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 3 }),
       collectionId: req.body.collectionId || null,
     })
 
@@ -166,7 +168,7 @@ const updateArtwork = async (req, res) => {
       priceOnRequest: req.body.priceOnRequest === 'true' || req.body.priceOnRequest === true,
       isDraft: req.body.isDraft === 'true' || req.body.isDraft === true,
       ...(req.body.stock !== undefined && { stock: parseInt(req.body.stock) || 1 }),
-      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 5 }),
+      ...(req.body.commissionPercent !== undefined && { commissionPercent: parseFloat(req.body.commissionPercent) || 3 }),
       collectionId: req.body.collectionId || null,
     })
 
