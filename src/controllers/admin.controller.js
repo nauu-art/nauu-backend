@@ -17,7 +17,7 @@ const adminLogin = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, accountType: 'ADMIN' },
       process.env.JWT_SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '8h' }
     )
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, accountType: user.accountType } })
   } catch (err) {

@@ -3,17 +3,16 @@ const router = express.Router();
 const { sendContact, getSentContacts, getReceivedContacts } = require('../controllers/contact.controller');
 const { authenticate, requireArtist, optionalAuth } = require('../middleware/auth.middleware');
 
-router.post('/:artistUsername', optionalAuth, sendContact);
 router.get('/sent', authenticate, getSentContacts);
 router.get('/received', authenticate, requireArtist, getReceivedContacts);
 
-module.exports = router;
-
-// Feedback geral da plataforma
+// Feedback geral da plataforma — tem de vir antes de /:artistUsername
 router.post('/feedback', async (req, res) => {
   try {
-    const { name, email, message } = req.body
-    if (!name || !email || !message) return res.status(400).json({ error: 'Campos obrigatórios em falta' })
+    const { name: rn, email: re, message: rm } = req.body
+    if (!rn || !re || !rm) return res.status(400).json({ error: 'Campos obrigatórios em falta' })
+    const esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    const name = esc(rn); const email = esc(re); const message = esc(rm)
     const { sendEmail } = require('../utils/email')
     await sendEmail({
       to: process.env.SMTP_USER,
@@ -33,3 +32,7 @@ router.post('/feedback', async (req, res) => {
     res.status(500).json({ error: 'Erro ao enviar feedback' })
   }
 })
+
+router.post('/:artistUsername', optionalAuth, sendContact);
+
+module.exports = router;

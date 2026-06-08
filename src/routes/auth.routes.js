@@ -4,6 +4,9 @@ const router = express.Router();
 const { register, verifyEmail, login, me, forgotPassword, resetPassword } = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 
+const escapeHtml = (s) => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')
+
+
 router.post('/register', register);
 router.post('/login', login);
 router.get('/verify-email/:token', verifyEmail);
@@ -60,7 +63,8 @@ router.put('/notifications', authenticate, async (req, res) => {
 // Doação — enviar instruções por email
 router.post('/donation', async (req, res) => {
   try {
-    const { name, email, amount, method, message } = req.body
+    const { name: rawName, email: rawEmail, amount: rawAmount, method, message: rawMessage } = req.body
+    const name = escapeHtml(rawName); const email = escapeHtml(rawEmail); const amount = escapeHtml(rawAmount); const message = escapeHtml(rawMessage)
     if (!name || !email || !amount || !method) return res.status(400).json({ error: 'Campos obrigatórios' })
     const { sendEmail } = require('../utils/email')
     const PAYMENT_INFO = {
@@ -107,8 +111,9 @@ router.post('/donation', async (req, res) => {
 // Newsletter subscribe
 router.post('/newsletter', async (req, res) => {
   try {
-    const { email, name } = req.body
-    if (!email) return res.status(400).json({ error: 'Email obrigatório' })
+    const { email: rawNlEmail, name: rawNlName } = req.body
+    if (!rawNlEmail) return res.status(400).json({ error: 'Email obrigatório' })
+    const email = escapeHtml(rawNlEmail); const name = escapeHtml(rawNlName)
     const { sendEmail } = require('../utils/email')
     // Notificar admin
     await sendEmail({
@@ -141,16 +146,16 @@ router.post('/newsletter', async (req, res) => {
 })
 
 // Mudar password (utilizador autenticado)
-router.get('/check-username', async (req, res) => {
+router.get('/check-username', authenticate, async (req, res) => {
   try {
-    const { username, userId } = req.query
+    const { username } = req.query
+    const userId = req.user.id
     if (!username || username.length < 3) return res.status(400).json({ error: 'Mínimo 3 caracteres' })
     if (!/^[a-z0-9_-]+$/.test(username)) return res.status(400).json({ error: 'Apenas letras minúsculas, números, _ e -' })
     const { PrismaClient } = require('@prisma/client')
     const prisma = new PrismaClient()
     const userExists = await prisma.user.findUnique({ where: { username } })
     const artistExists = await prisma.artistProfile.findUnique({ where: { username } })
-    // Ignorar o próprio utilizador
     if (userExists && userExists.id !== userId) return res.status(409).json({ error: 'Username já em uso' })
     if (artistExists && artistExists.userId !== userId) return res.status(409).json({ error: 'Username já em uso' })
     res.json({ available: true })

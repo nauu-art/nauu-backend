@@ -53,6 +53,13 @@ app.use(rateLimit({
   skip: (req) => req.ip === '127.0.0.1' || req.ip === '::1',
 }));
 
+// Rate limiting para endpoints de email (anti-spam)
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 5,
+  message: { error: 'Demasiados pedidos. Tenta mais tarde.' },
+})
+
 // Rate limiting estrito só para login/register
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -69,6 +76,11 @@ const authLimiter = rateLimit({
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }))
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Email-specific rate limiting (antes das rotas)
+app.use('/api/auth/donation', emailLimiter);
+app.use('/api/auth/newsletter', emailLimiter);
+app.use('/api/contact/feedback', emailLimiter);
 
 // Rotas
 app.use('/api/auth', authLimiter, authRoutes);

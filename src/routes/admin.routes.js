@@ -159,7 +159,7 @@ router.delete('/blog/:key', authenticate, requireAdmin, async (req, res) => {
 
 // Upload capa blog
 const { processImage: processImg } = require('../config/storage')
-const multerLocal = require('multer'); const uploadCoverLocal = multerLocal({ storage: multerLocal.memoryStorage(), limits: { fileSize: 10*1024*1024 } })
+const multerLocal = require('multer'); const uploadCoverLocal = multerLocal({ storage: multerLocal.memoryStorage(), limits: { fileSize: 10*1024*1024 }, fileFilter: (req, file, cb) => { const allowed = ['image/jpeg','image/png','image/webp']; allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('Apenas imagens JPEG, PNG ou WebP')) } })
 router.post('/blog/:key/cover', authenticate, requireAdmin, uploadCoverLocal.single('cover'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Sem ficheiro' })
@@ -175,19 +175,6 @@ router.post('/blog/:key/cover', authenticate, requireAdmin, uploadCoverLocal.sin
 })
 
 // Upload capa blog
-router.post('/blog/:key/cover', authenticate, requireAdmin, uploadCoverLocal.single('cover'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'Sem ficheiro' })
-    const imageUrl = await processImg(req.file.buffer, 'blog')
-    const { PrismaClient: PC3 } = require('@prisma/client')
-    const p = new PC3()
-    await p.siteContent.update({ where: { key: req.params.key }, data: { imageUrl } })
-    res.json({ imageUrl })
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Erro ao fazer upload' })
-  }
-})
 
 module.exports = router
 
