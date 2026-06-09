@@ -3,7 +3,7 @@ const router = express.Router()
 const { authenticate, requireArtist } = require('../middleware/auth.middleware')
 const { PrismaClient } = require('@prisma/client')
 const { notify } = require('../utils/notify')
-const { sendOrderConfirmationBuyer, sendOrderNotificationArtist } = require('../utils/email')
+const { sendOrderConfirmationBuyer, sendOrderNotificationArtist, sendEmail, baseTemplate } = require('../utils/email')
 const Stripe = require('stripe')
 const prisma = new PrismaClient()
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -190,6 +190,26 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             address: shippingAddress,
             orderId: order.id.slice(0, 8).toUpperCase()
           })
+        // Gerar e enviar certificado de autenticidade ao comprador
+          try {
+            const { generateCertificatePDF } = require('../services/certificate.service')
+            const fullOrder = await prisma.order.findUnique({
+              where: { id: order.id },
+              include: {
+                buyer: { select: { name: true, email: true } },
+                artist: { select: { artistName: true } },
+                artwork: { include: { images: { where: { isPrimary: true }, take: 1 }, artist: { select: { artistName: true } } } }
+              }
+            })
+            const certPdf = await generateCertificatePDF(fullOrder)
+            const certUrl = `${process.env.FRONTEND_URL}/certificado/${order.id}`
+            await sendEmail({
+              to: buyer.email,
+              subject: `nauu.art — Certificado de Autenticidade: ${artwork.title}`,
+              html: baseTemplate(`<h2>O teu Certificado de Autenticidade 🎨</h2><p>Olá, <strong>${buyer.name}</strong>! Segue em anexo o teu Certificado de Autenticidade para a obra <strong>${artwork.title}</strong>.</p><p>Podes também verificar o certificado online:</p><a href="${certUrl}" class="btn">Ver certificado online</a><p class="meta">Este certificado garante que és o proprietário de uma obra de arte original.</p>`),
+              attachments: [{ filename: `certificado-nauu-${order.id.slice(0,8)}.pdf`, content: certPdf, contentType: 'application/pdf' }]
+            })
+          } catch (certErr) { console.error('Erro certificado:', certErr.message) }
         } catch (emailErr) { console.error('Erro emails:', emailErr.message) }
 
         // Mensagem automática entre artista e comprador

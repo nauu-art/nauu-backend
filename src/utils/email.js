@@ -55,12 +55,13 @@ const baseTemplate = (content) => `
 </body>
 </html>`
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, attachments }) => {
   await getTransporter().sendMail({
     from: process.env.EMAIL_FROM,
     to,
     subject,
     html,
+    ...(attachments && { attachments }),
   })
 }
 
@@ -209,6 +210,7 @@ const sendOrderNotificationArtist = async (email, { artistName, buyerName, buyer
 
 module.exports = {
   sendEmail,
+  baseTemplate,
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendContactNotification,
