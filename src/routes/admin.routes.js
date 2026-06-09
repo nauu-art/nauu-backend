@@ -66,11 +66,36 @@ router.put('/artists/:id/approve', authenticate, requireAdmin, async (req, res) 
 })
 
 // GET /api/admin/settings
-router.get('/settings', authenticate, requireAdmin, (req, res) => {
+router.get('/settings', authenticate, requireAdmin, async (req, res) => {
+  const { PrismaClient } = require('@prisma/client')
+  const prisma = new PrismaClient()
   const svgPath = '/var/www/nauu/frontend/public/logo.svg'
   const pngPath = '/var/www/nauu/frontend/public/logo.png'
   const logoUrl = fs.existsSync(svgPath) ? '/logo.svg' : fs.existsSync(pngPath) ? '/logo.png' : null
-  res.json({ logoUrl })
+  const featureRows = await prisma.siteSettings.findMany({ where: { key: { startsWith: 'feature_' } } }).catch(() => [])
+  const features = Object.fromEntries(featureRows.map(r => [r.key.replace('feature_', ''), r.value === 'true']))
+  await prisma.$disconnect()
+  res.json({ logoUrl, features })
+})
+
+// PATCH /api/admin/settings/features
+router.patch('/settings/features', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client')
+    const prisma = new PrismaClient()
+    const { key, value } = req.body
+    const allowedKeys = ['ar', 'colorPalette']
+    if (!allowedKeys.includes(key)) return res.status(400).json({ error: 'Chave inválida' })
+    await prisma.siteSettings.upsert({
+      where: { key: `feature_${key}` },
+      update: { value: String(value) },
+      create: { key: `feature_${key}`, value: String(value) }
+    })
+    await prisma.$disconnect()
+    res.json({ ok: true, key, value })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao guardar' })
+  }
 })
 
 // POST /api/admin/logo

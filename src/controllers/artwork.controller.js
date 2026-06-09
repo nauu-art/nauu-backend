@@ -2,6 +2,9 @@ const { PrismaClient } = require('@prisma/client')
 const { notify, TYPES } = require('../utils/notify')
 const { z } = require('zod')
 const { processImage } = require('../config/storage')
+const { extractColors } = require('../services/colorExtract.service')
+const path = require('path')
+const UPLOAD_BASE = '/var/www/nauu/uploads'
 
 const prisma = new PrismaClient()
 
@@ -23,7 +26,7 @@ const artworkSchema = z.object({
 
 const getArtworks = async (req, res) => {
   try {
-    const { page = 1, limit = 20, category, minPrice, maxPrice, availability, search, sort = 'createdAt_desc', featured } = req.query
+    const { page = 1, limit = 20, category, minPrice, maxPrice, availability, search, sort = 'createdAt_desc', featured, colorBucket } = req.query
     const where = { artist: { status: 'APPROVED', user: { isBanned: false } }, isDraft: false }
     const skip = (Number(page) - 1) * Number(limit)
 
@@ -55,6 +58,7 @@ const getArtworks = async (req, res) => {
       const slugs = req.query.categories.split(',').filter(Boolean)
       if (slugs.length > 0) where.categories = { some: { category: { slug: { in: slugs } } } }
     }
+    if (colorBucket) where.colorBuckets = { hasSome: [colorBucket] }
 
     const [field, dir] = sort.split('_')
     const orderBy = { [field === 'price' ? 'price' : field === 'viewCount' ? 'viewCount' : 'createdAt']: dir === 'asc' ? 'asc' : 'desc' }
@@ -221,6 +225,15 @@ const uploadImages = async (req, res) => {
       })
       images.push(image)
     }
+
+    // Extract color palette from primary image
+    const primaryImg = images.find(img => img.isPrimary) || images[0]
+    if (primaryImg) {
+      const rel = primaryImg.imageUrl.startsWith('/uploads/') ? primaryImg.imageUrl.slice('/uploads/'.length) : primaryImg.imageUrl
+      const { colors, colorBuckets } = await extractColors(path.join(UPLOAD_BASE, rel))
+      if (colors.length) await prisma.artwork.update({ where: { id }, data: { colors, colorBuckets } })
+    }
+
     res.status(201).json(images)
   } catch (err) {
     console.error(err)

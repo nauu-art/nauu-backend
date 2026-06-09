@@ -110,6 +110,18 @@ app.use('/api/ar', arRoutes)
 app.use('/api/certificates', certificateRoutes)
 app.use('/api/analytics', analyticsRoutes)
 
+
+// Funcionalidades públicas
+app.get('/api/settings', async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client')
+    const prisma = new PrismaClient()
+    const rows = await prisma.siteSettings.findMany({ where: { key: { startsWith: 'feature_' } } })
+    await prisma.$disconnect()
+    const features = Object.fromEntries(rows.map(r => [r.key.replace('feature_', ''), r.value === 'true']))
+    res.json(features)
+  } catch { res.json({ ar: true, colorPalette: true }) }
+})
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

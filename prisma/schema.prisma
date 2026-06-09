@@ -146,6 +146,8 @@ model Artwork {
   curatedItems     CuratedItem[]    @relation("CuratedArtworks")
   isApproved     Boolean      @default(true)
   viewCount      Int          @default(0)
+  colors         String[]     @default([])
+  colorBuckets   String[]     @default([])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -490,4 +492,10 @@ model ArtistCollection {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   artworks    Artwork[]
+}
+
+model SiteSettings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
