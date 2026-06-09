@@ -104,6 +104,8 @@ app.use('/api/profile', profileRoutes);
 const curatedRoutes = require('./routes/curated.routes')
 app.use('/api/curated', curatedRoutes)
 const analyticsRoutes = require('./routes/analytics.routes')
+const arRoutes = require('./routes/ar.routes')
+app.use('/api/ar', arRoutes)
 app.use('/api/analytics', analyticsRoutes)
 
 // Health check
